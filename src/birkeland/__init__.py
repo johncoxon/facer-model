@@ -1,4 +1,5 @@
 import numpy as np
+from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
 class Model(object):
@@ -140,7 +141,7 @@ class Model(object):
                          + 2 * (self.e_d() - self.e_b()) * self.theta_d
                          + self.e_n() * self.theta[mask5])
 
-        # Every solution from Table 1 is multiplied by -R_E * np.sin(lambda_R1), so do that now.
+        # Every solution from Table 1 is multiplied by -R_E * np.sin(labda_R1), so do that now.
         phi_r1 *= -self._r_e * np.sin(self.labda_r1)
 
         if phi_r1.shape[0] == 1:
@@ -150,7 +151,7 @@ class Model(object):
 
     @staticmethod
     def _lambda(labda):
-        """The lambda term defined at the bottom of column 1 on page 5, used in Equations 17-19."""
+        """The capital lambda term defined on page 5 and used in Equations 17-19."""
         return np.log(np.tan(labda / 2))
 
     def phi_pc(self, labda):
@@ -358,6 +359,164 @@ class Model(object):
         j[r2_index, :] = self.j_r2_intensity()
 
         return j
+
+    def draw_potential_contours(self, ax):
+        """Draw contours of the electric potential as in Figure 2e-j."""
+        phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
+        ax.contour(self.theta, self.r_plot, self.phi, levels=phi_contours, colors="black")
+
+    def map_current(self, ax, vlim=100):
+        """Plot a map of the Birkeland current as in Figure i-j."""
+        mesh = ax.pcolormesh(self.theta, self.r_plot, self.j * 1e3, cmap="RdBu_r",
+                             vmin=-vlim, vmax=vlim, shading="nearest")
+
+        self.draw_potential_contours(ax)
+        self._configure_polar_plot(ax, 30)
+
+        return mesh
+
+    def map_electric_field(self, ax, component, vlim=50):
+        """Plot a map of the electric field in either component as in Figure 2e-h."""
+        if component == "labda":
+            e_field = self.e_labda
+            y_label = r"$\mathregular{E_\lambda}$"
+        elif component == "theta":
+            e_field = self.e_theta
+            y_label = r"$\mathregular{E_\theta}$"
+        else:
+            raise ValueError("Component must be \"theta\" or \"phi\".")
+
+        mesh = ax.pcolormesh(self.theta, self.r_plot, e_field * 1e3, cmap="PuOr_r",
+                             vmin=-vlim, vmax=vlim, shading="nearest")
+
+        ax.set_ylabel(y_label, labelpad=20)
+        self.draw_potential_contours(ax)
+        self._configure_polar_plot(ax, 30)
+
+        return mesh
+
+    def map_electric_potential(self, ax, vlim=30):
+        """Plot a map of the electric potential."""
+        mesh = ax.pcolormesh(self.theta, self.r_plot, self.phi / 1e3, cmap="PuOr_r",
+                             vmin=-vlim, vmax=vlim, shading="nearest")
+
+        self.draw_potential_contours(ax)
+        self._configure_polar_plot(ax, 30)
+
+        return mesh
+
+    def map_flow_vector(self, ax, component, vlim=750):
+        """Plot a map of the ionospheric flow vector."""
+        if component == "labda":
+            flow_vector = self.v_labda
+            y_label = r"$\mathregular{V_\lambda}$"
+        elif component == "theta":
+            flow_vector = self.v_theta
+            y_label = r"$\mathregular{V_\theta}$"
+        else:
+            raise ValueError("Component must be \"theta\" or \"phi\".")
+
+        mesh = ax.pcolormesh(self.theta, self.r_plot, flow_vector, cmap="PuOr_r",
+                             vmin=-vlim, vmax=vlim, shading="nearest")
+
+        ax.set_ylabel(y_label, labelpad=20)
+        self.draw_potential_contours(ax)
+        self._configure_polar_plot(ax, 30)
+
+        return mesh
+
+    def plot_r1_and_r2_intensity(self, ax):
+        """Plot the intensity of Region 1 and Region 2 as in Figure 2c-d."""
+        mlt = np.degrees(self.theta) / 15
+        ax.plot(mlt, self.j_r1_intensity() * 1e3, label="R1")
+        ax.plot(mlt, self.j_r2_intensity() * 1e3, label="R2")
+
+        r1_string = fr"$\mathregular{{J_{{R1}}=}}${self.j_r1_integrated() / 1e6:.2f} MA mho$^{-1}$"
+        r2_string = fr"$\mathregular{{J_{{R2}}=}}${self.j_r2_integrated() / 1e6:.2f} MA mho$^{-1}$"
+        ax.annotate(r1_string + "\n" + r2_string, (1, 0), xycoords="axes fraction", xytext=(-5, 5),
+                    textcoords="offset points", ha="right", va="bottom", fontsize=10)
+
+        ax.set(xlabel="MLT",
+               ylabel=r"$\mathregular{j_\parallel/\Sigma_P}$ (mA mho$^{-1}$ m$^{-1}$)")
+        ax.xaxis.set_major_locator(MultipleLocator(6))
+
+    def plot_r1_potential(self, ax):
+        """Plot the electric potential in Region 1 as in Figure 2a-b."""
+        ax.plot(np.degrees(self.theta) / 15, self.phi_r1() / 1e3)
+        ax.set(xlabel="MLT", ylabel=r"$\mathregular{\phi_{R1}}$ (kV)")
+        ax.xaxis.set_major_locator(MultipleLocator(6))
+
+    @staticmethod
+    def add_cax(fig, ax, pad=0.05, width=0.01, position="right"):
+        """Add a colourbar axis to a figure."""
+        if isinstance(ax, np.ndarray):
+            if len(ax.shape) == 1:
+                ax_bbox = ax[-1].get_position()
+                cax_bbox = ax_bbox
+
+                if position == "right":
+                    cax_bbox.y0 = ax[0].get_position().y0
+                else:
+                    cax_bbox.x0 = ax[0].get_position().x0
+            else:
+                ax_bbox = ax[-1, -1].get_position()
+                cax_bbox = ax_bbox
+
+                if position == "right":
+                    cax_bbox.y1 = ax[0, -1].get_position().y1
+                else:
+                    cax_bbox.x0 = ax[-1, 0].get_position().x0
+        else:
+            ax_bbox = ax.get_position()
+            cax_bbox = ax_bbox
+
+        if position == "right":
+            cax_bbox.x0 = ax_bbox.x1 + pad
+            cax_bbox.x1 = cax_bbox.x0 + width
+        elif position == "below":
+            cax_bbox.y1 = ax_bbox.y0 - pad
+            cax_bbox.y0 = cax_bbox.y1 - width
+        else:
+            raise ValueError('Position must be "right" or "below".')
+
+        cax = fig.add_axes(cax_bbox)
+
+        return cax
+
+    @staticmethod
+    def _configure_polar_plot(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
+        """Configures a polar plot with midnight at the bottom and sensible labelling."""
+        def format_mlt():
+            """Return MLT in hours rather than a number of degrees when drawing axis labels."""
+
+            # noinspection PyUnusedLocal
+            def formatter_function(y, pos):
+                hours = y * (12 / np.pi)
+                if hours == 24:
+                    return ""
+                else:
+                    if hours < 0:
+                        hours += 24
+                    return f"{hours:.0f}"
+
+            return FuncFormatter(formatter_function)
+
+        # Configure colatitude.
+        ax.set_rmin(0.0)
+        ax.set_rmax(rmax)
+        ax.yaxis.set_major_locator(MultipleLocator(colat_grid_spacing))
+
+        ax.set_theta_zero_location("S")
+
+        if theta_range is not None:
+            ax.set_thetamin(theta_range[0])
+            ax.set_thetamax(theta_range[1])
+
+        if mlt:
+            ax.xaxis.set_major_formatter(format_mlt())
+            ax.xaxis.set_major_locator(MultipleLocator(np.pi / 2))
+
+        ax.grid(True)
 
     @staticmethod
     def _coth(x):
