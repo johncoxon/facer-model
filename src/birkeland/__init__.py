@@ -3,7 +3,7 @@ import numpy as np
 
 class Model(object):
     def __init__(self, phi_d, phi_n, f_pc, theta_d=30, theta_n=30, sigma_pc=1, sigma_rf=1,
-                 delta_colat=10, r1_colat=None, order_n=20, use_igrf=False, datetime=None):
+                 delta_colat=10, r1_colat=None, order_n=20):
         """
         A Python implementation of the Birkeland current model presented by Milan (2013).
 
@@ -28,11 +28,6 @@ class Model(object):
             cap flux F_PC. (This is implemented to allow comparisons to the original IDL.)
         order_n : int, optional, default 20
             Set this to govern the order of the Fourier terms in the model.
-        use_igrf : bool, optional, default False
-            Set this to True if you want to use the IGRF model instead of Equation 6 to get radial
-            magnetic field.
-        datetime : datetime.datetime, optional, default None
-            Set this to a datetime if use_igrf is set.
         """
         self.phi_d = phi_d * 1e3
         self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
@@ -46,8 +41,6 @@ class Model(object):
         self._alpha = self.sigma_rf / self.sigma_pc
 
         # Configure magnetic field information for the model.
-        self.use_igrf = use_igrf
-        self.datetime = datetime
         self._r_e = 6.371e6                     # Earth radius of 6371 km.
         self._b_eq = 31000e-9                   # Equatorial field strength of 31,000 nT.
 
@@ -132,7 +125,7 @@ class Model(object):
         mask4 = ((self.theta >= condition3) & (self.theta < condition4))
         mask5 = ((self.theta >= condition4) & (self.theta < condition5))
 
-        # This actually does the maths from Table 1 and puts it in the table. There isn't a
+        # This actually does the maths from Table 1 and puts it in the array. There isn't a
         # great way to make this human-readable, unfortunately.
         phi_r1[mask1] = self.e_n() * self.theta[mask1]
         phi_r1[mask2] = ((self.e_n() - self.e_b()) * self.theta_n
