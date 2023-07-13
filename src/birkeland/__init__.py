@@ -363,11 +363,11 @@ class Model(object):
     def draw_potential_contours(self, ax):
         """Draw contours of the electric potential as in Figure 2e-j."""
         phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
-        ax.contour(self.theta, self.r_plot, self.phi, levels=phi_contours, colors="black")
+        ax.contour(self.theta, self.colat, self.phi, levels=phi_contours, colors="black")
 
     def map_current(self, ax, vlim=100):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = ax.pcolormesh(self.theta, self.r_plot, self.j * 1e3, cmap="RdBu_r",
+        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap="RdBu_r",
                              vmin=-vlim, vmax=vlim, shading="nearest")
 
         self.draw_potential_contours(ax)
@@ -386,7 +386,7 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.r_plot, e_field * 1e3, cmap="PuOr_r",
+        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap="PuOr_r",
                              vmin=-vlim, vmax=vlim, shading="nearest")
 
         ax.set_ylabel(y_label, labelpad=20)
@@ -397,7 +397,7 @@ class Model(object):
 
     def map_electric_potential(self, ax, vlim=30):
         """Plot a map of the electric potential."""
-        mesh = ax.pcolormesh(self.theta, self.r_plot, self.phi / 1e3, cmap="PuOr_r",
+        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap="PuOr_r",
                              vmin=-vlim, vmax=vlim, shading="nearest")
 
         self.draw_potential_contours(ax)
@@ -416,7 +416,7 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.r_plot, flow_vector, cmap="PuOr_r",
+        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap="PuOr_r",
                              vmin=-vlim, vmax=vlim, shading="nearest")
 
         ax.set_ylabel(y_label, labelpad=20)
@@ -427,9 +427,8 @@ class Model(object):
 
     def plot_r1_and_r2_intensity(self, ax):
         """Plot the intensity of Region 1 and Region 2 as in Figure 2c-d."""
-        mlt = np.degrees(self.theta) / 15
-        ax.plot(mlt, self.j_r1_intensity() * 1e3, label="R1")
-        ax.plot(mlt, self.j_r2_intensity() * 1e3, label="R2")
+        ax.plot(self.mlt, self.j_r1_intensity() * 1e3, label="R1")
+        ax.plot(self.mlt, self.j_r2_intensity() * 1e3, label="R2")
 
         r1_string = fr"$\mathregular{{J_{{R1}}=}}${self.j_r1_integrated() / 1e6:.2f} MA mho$^{-1}$"
         r2_string = fr"$\mathregular{{J_{{R2}}=}}${self.j_r2_integrated() / 1e6:.2f} MA mho$^{-1}$"
@@ -442,7 +441,7 @@ class Model(object):
 
     def plot_r1_potential(self, ax):
         """Plot the electric potential in Region 1 as in Figure 2a-b."""
-        ax.plot(np.degrees(self.theta) / 15, self.phi_r1() / 1e3)
+        ax.plot(self.mlt, self.phi_r1() / 1e3)
         ax.set(xlabel="MLT", ylabel=r"$\mathregular{\phi_{R1}}$ (kV)")
         ax.xaxis.set_major_locator(MultipleLocator(6))
 
