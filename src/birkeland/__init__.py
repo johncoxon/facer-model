@@ -8,9 +8,9 @@ class Model(object):
         """
         A Python implementation of the Birkeland current model presented by Milan (2013).
 
-        A "simple mathematical model of the region 1 and 2 Birkeland current system intensities for
+        A simple mathematical model of the region 1 and 2 Birkeland current system intensities for
         differing dayside and nightside magnetic reconnection rates, consistent with the
-        expanding/contracting polar cap paradigm of solar wind-magnetosphere-ionosphere coupling."
+        expanding/contracting polar cap paradigm of solar wind-magnetosphere-ionosphere coupling.
 
         Parameters
         ----------
