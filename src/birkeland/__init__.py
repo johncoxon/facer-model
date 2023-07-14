@@ -85,7 +85,7 @@ class Model(object):
 
     def lambda_r1(self):
         """lambda_R1 determined using F_PC from the inverse of Equation 8."""
-        return np.sqrt(np.arcsin(self.f_pc / (2 * np.pi * (self._r_e ** 2) * self._b_eq)))
+        return np.arcsin(np.sqrt(self.f_pc / (2 * np.pi * (self._r_e ** 2) * self._b_eq)))
 
     def v_r1(self):
         """R1 current oval velocity V_R1 from Equation 9."""
