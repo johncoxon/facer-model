@@ -3,8 +3,8 @@ from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
 class Model(object):
-    def __init__(self, phi_d, phi_n, f_pc=None, r1_colat=None, theta_d=30, theta_n=30, sigma_pc=1,
-                 sigma_rf=1, delta_colat=10, order_n=20):
+    def __init__(self, phi_d, phi_n, f_pc=None, r1_colat=None, delta_colat=10,
+                 theta_d=30, theta_n=30, sigma_pc=1, sigma_rf=1, order_n=20):
         """
         A Python implementation of the Birkeland current model presented by Milan (2013).
 
@@ -20,15 +20,12 @@ class Model(object):
             Polar cap flux in GWb. If set, labda_r1 is calculated from this value.
         r1_colat : float, optional, default None
             Colatitude of the R1 current oval in deg. If set, f_pc is calculated from this value.
+        delta_colat : float, optional, default 10
+            The colatitudinal gap between the R1 and R2 current ovals in degrees.
         theta_d, theta_n : float, optional, default 30
             The azimuthal widths of the dayside and nightside merging gaps, in degrees.
         sigma_pc, sigma_rf : float, optional, default 1
             The conductivities in polar cap and return flow regions, in mho.
-        delta_colat : float, optional, default 10
-            The colatitudinal gap between the R1 and R2 current ovals in degrees.
-        r1_colat : float, optional, default None
-            Set this to specify an R1 colatitude instead of calculating it directly from the polar
-            cap flux F_PC. (This is implemented to allow comparisons to the original IDL.)
         order_n : int, optional, default 20
             Set this to govern the order of the Fourier terms in the model.
         """
@@ -51,7 +48,7 @@ class Model(object):
             self.labda_r1 = self.lambda_r1()
         elif r1_colat is not None:
             self.labda_r1 = np.radians(r1_colat)
-            self.f_pc = self.f_pc()
+            self.f_pc = self.f_pc_analytic()
         else:
             raise ValueError("You must pass either polar cap flux or R1 colatitude to the model.")
         self.labda_r2 = self.labda_r1 + np.radians(delta_colat)
@@ -94,7 +91,7 @@ class Model(object):
         b_r = np.broadcast_to(self.b_r(self.labda), (self._n_theta, self._n_labda)).T
         return b_r
 
-    def f_pc(self):
+    def f_pc_analytic(self):
         """F_PC determined using lambda_R1 from Equation 8."""
         return 2 * np.pi * (self._r_e ** 2) * self._b_eq * (np.sin(self.labda_r1) ** 2)
 
