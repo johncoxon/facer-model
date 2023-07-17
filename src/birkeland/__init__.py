@@ -3,8 +3,8 @@ from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
 class Model(object):
-    def __init__(self, phi_d, phi_n, f_pc, theta_d=30, theta_n=30, sigma_pc=1, sigma_rf=1,
-                 delta_colat=10, r1_colat=None, order_n=20):
+    def __init__(self, phi_d, phi_n, f_pc=None, r1_colat=None, theta_d=30, theta_n=30, sigma_pc=1,
+                 sigma_rf=1, delta_colat=10, order_n=20):
         """
         A Python implementation of the Birkeland current model presented by Milan (2013).
 
@@ -16,8 +16,10 @@ class Model(object):
         ----------
         phi_d, phi_n : float
             Dayside and nightside reconnection rates, in kV.
-        f_pc : float
-            The polar cap flux, in GWb.
+        f_pc : float, optional, default None
+            Polar cap flux in GWb. If set, labda_r1 is calculated from this value.
+        r1_colat : float, optional, default None
+            Colatitude of the R1 current oval in deg. If set, f_pc is calculated from this value.
         theta_d, theta_n : float, optional, default 30
             The azimuthal widths of the dayside and nightside merging gaps, in degrees.
         sigma_pc, sigma_rf : float, optional, default 1
@@ -32,7 +34,6 @@ class Model(object):
         """
         self.phi_d = phi_d * 1e3
         self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
-        self.f_pc = f_pc * 1e9
         self.theta_d = np.radians(theta_d)              # theta is MLT
         self.theta_n = np.radians(theta_n)
         self.sigma_pc = sigma_pc
@@ -44,6 +45,16 @@ class Model(object):
         # Configure magnetic field information for the model.
         self._r_e = 6.371e6                     # Earth radius of 6371 km.
         self._b_eq = 31000e-9                   # Equatorial field strength of 31,000 nT.
+
+        if f_pc is not None:
+            self.f_pc = f_pc * 1e9
+            self.labda_r1 = self.lambda_r1()
+        elif r1_colat is not None:
+            self.labda_r1 = np.radians(r1_colat)
+            self.f_pc = self.f_pc()
+        else:
+            raise ValueError("You must pass either polar cap flux or R1 colatitude to the model.")
+        self.labda_r2 = self.labda_r1 + np.radians(delta_colat)
 
         # Configure the default grid for the model. Milan (2013) uses the symbol lambda to refer to
         # colatitude, but lambda has an inbuilt meaning in Python, so we use "labda" instead.
@@ -83,12 +94,20 @@ class Model(object):
         b_r = np.broadcast_to(self.b_r(self.labda), (self._n_theta, self._n_labda)).T
         return b_r
 
+    def f_pc(self):
+        """F_PC determined using lambda_R1 from Equation 8."""
+        return 2 * np.pi * (self._r_e ** 2) * self._b_eq * (np.sin(self.labda_r1) ** 2)
+
     def lambda_r1(self):
         """lambda_R1 determined using F_PC from the inverse of Equation 8."""
         return np.arcsin(np.sqrt(self.f_pc / (2 * np.pi * (self._r_e ** 2) * self._b_eq)))
 
     def v_r1(self):
-        """R1 current oval velocity V_R1 from Equation 9."""
+        """
+        R1 current oval velocity V_R1 from Equation 9. Note that we do not take the square of Earth
+        radius; this appears to be a typo in the paper, as in the IDL code the equation appears as
+        expressed here.
+        """
         numerator = self.phi_d - self.phi_n
         denominator = 2 * np.pi * self._r_e * self._b_eq * np.sin(2 * self.labda_r1)
         return numerator / denominator
