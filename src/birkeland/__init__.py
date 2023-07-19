@@ -43,7 +43,13 @@ class Model(object):
         self._r_e = 6.371e6                     # Earth radius of 6371 km.
         self._b_eq = 31000e-9                   # Equatorial field strength of 31,000 nT.
 
-        if f_pc is not None:
+        if (f_pc is not None) and (r1_colat is not None):
+            self.f_pc = f_pc * 1e9
+            self.labda_r1 = np.radians(r1_colat)
+            raise Warning("Setting both polar cap flux and R1 colatitude will set both manually. "
+                          "This is supported to allow comparisons with the original IDL, but is "
+                          "not recommended.")
+        elif f_pc is not None:
             self.f_pc = f_pc * 1e9
             self.labda_r1 = self.lambda_r1()
         elif r1_colat is not None:
