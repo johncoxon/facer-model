@@ -564,8 +564,10 @@ class BetterModel(Model):
 
         # Set the Pedersen and Hall conductivities in the return flow region.
         _, _, _, mask = self.labda_by_region()
-        sigma_h[mask, :] += rf_sigma_h
-        sigma_p[mask, :] += rf_sigma_p
+
+        print("don't forget to change this back to a +=")
+        sigma_h[mask, :] = rf_sigma_h
+        sigma_p[mask, :] = rf_sigma_p
 
         return sigma_h, sigma_p
 
@@ -643,5 +645,30 @@ class BetterModel(Model):
         loc = EarthLocation.from_geodetic(lon_grid, lat_grid, alt_grid)
         altitude_azimuth = AltAz(obstime=time, location=loc)
         angle = get_sun(time).transform_to(altitude_azimuth).zen.radian
+
+        return angle
+
+    def solar_zenith_angle2(self):
+        ut = self.time.hour
+
+        labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
+        theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
+
+        season_tilt = 23.5
+        diurnal_tilt = 10.0
+
+        doy = self.time.timetuple().tm_yday
+
+        if self.hemisphere == "north":
+            sun_tilt = np.radians(season_tilt * np.cos(2 * np.pi * (doy - 173.) / 365)
+                                  + diurnal_tilt * np.cos(2 * np.pi * (ut - 17) / 24))
+        else:
+            sun_tilt = np.radians(season_tilt * np.cos(2 * np.pi * (doy - 173. + 365 / 2.) / 365)
+                                  + diurnal_tilt * np.cos(2 * np.pi * (ut - 5) / 24))
+
+        r_hat = [-np.sin(labda_grid) * np.cos(theta_grid),
+                 np.sin(labda_grid) * np.sin(theta_grid),
+                 np.cos(labda_grid)]
+        angle = np.arccos(r_hat[0] * np.cos(sun_tilt) + r_hat[2] * np.sin(sun_tilt))
 
         return angle
