@@ -1,4 +1,6 @@
 import numpy as np
+from astropy.coordinates import get_sun, AltAz, EarthLocation
+from astropy.time import Time
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
@@ -533,3 +535,99 @@ class Model(object):
     def _csch(x):
         """Used in Equations 29 and 31."""
         return 1 / np.sinh(x)
+
+
+class BetterModel(Model):
+    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7, **kwargs):
+        """Milan (2013) model expanded with the Moen and Brekke (1993) model"""
+        Model.__init__(self, phi_d, phi_n, **kwargs)
+
+        self.f_107 = f_107
+        self.time = time
+        if hemisphere not in {"north", "south"}:
+            raise ValueError("Hemisphere must be \"north\" or \"south\".")
+        else:
+            self.hemisphere = hemisphere
+
+        self.sza = self.solar_zenith_angle()
+        self.sigma_h, self.sigma_p = self.conductance(sigma_h, sigma_p)
+
+    def conductance(self, rf_sigma_h, rf_sigma_p):
+        """"""
+        sigma_h, sigma_p = self.quiet_time_conductance()
+
+        # Set the Pedersen and Hall conductivities in the return flow region.
+        _, _, _, mask = self.labda_by_region()
+        sigma_h[mask, :] += rf_sigma_h
+        sigma_p[mask, :] += rf_sigma_p
+
+        return sigma_h, sigma_p
+
+    def currents(self):
+        div_jp = np.ones_like(self.sigma_p) * np.nan
+        div_jh = np.ones_like(self.sigma_h) * np.nan
+
+        for i, labda in enumerate(self.labda):
+            if not i:
+                continue
+
+            for j, _ in enumerate(self.theta):
+                # Pedersen current in latitude
+                j_p = (2 * np.pi * self._r_e * np.sin(labda) / 180.) * \
+                      (self.e_labda[i-1, j] * self.sigma_p[i-1, j]
+                       - self.e_labda[i, j] * self.sigma_p[i, j])
+                div_jp[0, j] += j_p / 2
+                div_jp[i, j] += j_p / 2
+
+                # Pedersen current in longitude
+                j_p = (2 * np.pi * self._r_e / 360.) * \
+                      ((self.e_theta[i, (j+1) % 180] * self.sigma_p[i, (j+1) % 180])
+                       - (self.e_theta[i, j] * self.sigma_p[i, j]))
+                div_jp[i, j] = div_jp[i, j] + j_p / 2.
+                div_jp[i, (j+1) % 180.] = div_jp[i, (j+1) % 180.] + j_p / 2.
+
+                # Hall current in latitude
+                j_h = (2 * np.pi * self._r_e * np.sin(i) / 180.) * \
+                      ((self.e_theta[i-1, j] * self.sigma_h[i-1, j])
+                       - (self.e_theta[i, j] * self.sigma_h[i, j]))
+                div_jh[0, j] = div_jh[0, j] + j_h / 2
+                div_jh[i, j] = div_jh[i, j] + j_h / 2
+
+                # Hall current in longitude
+                j_h = (2 * np.pi * self._r_e / 360) * \
+                      ((self.e_labda[i, (j+1) % 180] * self.sigma_h[i, (j+1) % 180])
+                       - (self.e_labda[i, j] * self.sigma_h[i, j]))
+                div_jh[i, j] = div_jh[i, j] + j_h / 2
+                div_jh[i, (j+1) % 180] = div_jh[i, (j+1) % 180] + j_h / 2
+
+    def quiet_time_conductance(self):
+        """Quiet-time conductance calculated from Moen and Brekke (1993)."""
+        sigma_h = np.zeros_like(self.sza)
+        sigma_p = np.zeros_like(self.sza)
+
+        day_mask = self.sza < np.pi / 2.
+        sza_day = self.sza[day_mask]
+
+        sigma_h[day_mask] = (self.f_107 ** 0.53) * ((0.81 * np.cos(sza_day))
+                                                    + (0.54 * np.sqrt(np.cos(sza_day))))
+        sigma_p[day_mask] = (self.f_107 ** 0.49) * ((0.34 * np.cos(sza_day))
+                                                    + (0.93 * np.sqrt(np.cos(sza_day))))
+
+        return sigma_h, sigma_p
+
+    def solar_zenith_angle(self):
+        """Calculate the solar zenith angle using AstroPy."""
+        time = Time(self.time)
+
+        lat_grid = 90 - np.broadcast_to(self.colat, (self._n_theta, self._n_labda)).T
+        lon_grid = 15 * np.broadcast_to(self.mlt, (self._n_labda, self._n_theta))
+        alt_grid = np.ones_like(lat_grid) * 780
+
+        if self.hemisphere == "south":
+            lat_grid *= -1
+
+        loc = EarthLocation.from_geodetic(lon_grid, lat_grid, alt_grid)
+        altitude_azimuth = AltAz(obstime=time, location=loc)
+        angle = get_sun(time).transform_to(altitude_azimuth).zen.radian
+
+        return angle
