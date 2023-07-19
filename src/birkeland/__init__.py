@@ -600,6 +600,10 @@ class BetterModel(Model):
                 div_jh[i, j] = div_jh[i, j] + j_h / 2
                 div_jh[i, (j+1) % 180] = div_jh[i, (j+1) % 180] + j_h / 2
 
+        fac = div_jp + div_jh
+
+        return div_jp, div_jh, fac
+
     def quiet_time_conductance(self):
         """Quiet-time conductance calculated from Moen and Brekke (1993)."""
         sigma_h = np.zeros_like(self.sza)
