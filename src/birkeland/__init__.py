@@ -1,4 +1,5 @@
 import numpy as np
+import warnings
 from astropy.coordinates import get_sun, AltAz, EarthLocation
 from astropy.time import Time
 from matplotlib.ticker import FuncFormatter, MultipleLocator
@@ -48,7 +49,7 @@ class Model(object):
         if (f_pc is not None) and (r1_colat is not None):
             self.f_pc = f_pc * 1e9
             self.labda_r1 = np.radians(r1_colat)
-            raise Warning("Setting both polar cap flux and R1 colatitude will set both manually. "
+            warnings.warn("Setting both polar cap flux and R1 colatitude will set both manually. "
                           "This is supported to allow comparisons with the original IDL, but is "
                           "not recommended.")
         elif f_pc is not None:
