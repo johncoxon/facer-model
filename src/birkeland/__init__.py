@@ -559,7 +559,6 @@ class BetterModel(Model):
         self.sigma_h, self.sigma_p = self.conductance(sigma_h, sigma_p)
 
     def conductance(self, rf_sigma_h, rf_sigma_p):
-        """"""
         sigma_h, sigma_p = self.quiet_time_conductance()
 
         # Set the Pedersen and Hall conductivities in the return flow region.
@@ -570,41 +569,45 @@ class BetterModel(Model):
         return sigma_h, sigma_p
 
     def currents(self):
-        div_jp = np.ones_like(self.sigma_p) * np.nan
-        div_jh = np.ones_like(self.sigma_h) * np.nan
+        div_jp = np.zeros_like(self.sigma_h)
+        div_jh = np.zeros_like(self.sigma_h)
 
         for i, labda in enumerate(self.labda):
-            if not i:
+            if i == 0:
                 continue
 
             for j, _ in enumerate(self.theta):
                 # Pedersen current in latitude
                 j_p = (2 * np.pi * self._r_e * np.sin(labda) / 180.) * \
-                      (self.e_labda[i-1, j] * self.sigma_p[i-1, j]
+                      (self.e_labda[i - 1, j] * self.sigma_p[i - 1, j]
                        - self.e_labda[i, j] * self.sigma_p[i, j])
                 div_jp[0, j] += j_p / 2
                 div_jp[i, j] += j_p / 2
 
+                j_plus_1 = (j + 1) % 360
+
                 # Pedersen current in longitude
                 j_p = (2 * np.pi * self._r_e / 360.) * \
-                      ((self.e_theta[i, (j+1) % 180] * self.sigma_p[i, (j+1) % 180])
+                      ((self.e_theta[i, j_plus_1] * self.sigma_p[i, j_plus_1])
                        - (self.e_theta[i, j] * self.sigma_p[i, j]))
-                div_jp[i, j] = div_jp[i, j] + j_p / 2.
-                div_jp[i, (j+1) % 180.] = div_jp[i, (j+1) % 180.] + j_p / 2.
+                div_jp[i, j] += j_p / 2.
+                div_jp[i, j_plus_1] += j_p / 2.
 
                 # Hall current in latitude
-                j_h = (2 * np.pi * self._r_e * np.sin(i) / 180.) * \
-                      ((self.e_theta[i-1, j] * self.sigma_h[i-1, j])
+                j_h = (2 * np.pi * self._r_e * np.sin(labda) / 180.) * \
+                      ((self.e_theta[i - 1, j] * self.sigma_h[i - 1, j])
                        - (self.e_theta[i, j] * self.sigma_h[i, j]))
-                div_jh[0, j] = div_jh[0, j] + j_h / 2
-                div_jh[i, j] = div_jh[i, j] + j_h / 2
+
+                div_jh[0, j] += j_h / 2
+                div_jh[i, j] += j_h / 2
 
                 # Hall current in longitude
                 j_h = (2 * np.pi * self._r_e / 360) * \
-                      ((self.e_labda[i, (j+1) % 180] * self.sigma_h[i, (j+1) % 180])
+                      ((self.e_labda[i, j_plus_1] * self.sigma_h[i, j_plus_1])
                        - (self.e_labda[i, j] * self.sigma_h[i, j]))
-                div_jh[i, j] = div_jh[i, j] + j_h / 2
-                div_jh[i, (j+1) % 180] = div_jh[i, (j+1) % 180] + j_h / 2
+
+                div_jh[i, j] += j_h / 2
+                div_jh[i, j_plus_1] += j_h / 2
 
         fac = div_jp + div_jh
 
