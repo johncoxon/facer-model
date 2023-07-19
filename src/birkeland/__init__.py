@@ -31,7 +31,7 @@ class Model(object):
         """
         self.phi_d = phi_d * 1e3
         self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
-        self.theta_d = np.radians(theta_d)              # theta is MLT
+        self.theta_d = np.radians(theta_d)
         self.theta_n = np.radians(theta_n)
         self.sigma_pc = sigma_pc
         self.sigma_rf = sigma_rf
@@ -61,15 +61,6 @@ class Model(object):
         self.theta = np.radians(np.linspace(0.5, 359.5, self._n_theta))  # 1° azimuthal resolution
         self.colat = np.degrees(self.labda)
         self.mlt = np.degrees(self.theta) / 15
-
-        # Calculate the colatitude of the R1 and R2 current ovals. If a colatitude has been
-        # specified for R1, do not calculate the colatitude from the underlying F_PC value.
-        if r1_colat:
-            print("Manually overriding R1 current oval colatitude...")
-            self.labda_r1 = np.radians(r1_colat)
-        else:
-            self.labda_r1 = self.lambda_r1()
-        self.labda_r2 = self.labda_r1 + np.radians(delta_colat)
 
         # Set the limit of the Fourier series used in the maths and calculate the s_m variable.
         # Add one to order_n so that range returns m from 1 up to order_n.
