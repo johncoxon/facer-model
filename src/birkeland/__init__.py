@@ -1,3 +1,4 @@
+import datetime as dt
 import numpy as np
 import warnings
 from astropy.coordinates import get_sun, AltAz, EarthLocation
@@ -134,7 +135,7 @@ class Model(object):
         condition3 = np.pi + self.theta_d
         condition4 = 2 * np.pi - self.theta_n
         condition5 = 2 * np.pi
-        
+
         # These are the five different combinations of conditions in Table 1.
         mask1 = ((self.theta >= condition0) & (self.theta < condition1))
         mask2 = ((self.theta >= condition1) & (self.theta < condition2))
@@ -501,6 +502,7 @@ class Model(object):
     @staticmethod
     def _configure_polar_plot(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
         """Configures a polar plot with midnight at the bottom and sensible labelling."""
+
         def format_mlt():
             """Return MLT in hours rather than a number of degrees when drawing axis labels."""
 
@@ -556,7 +558,7 @@ class BetterModel(Model):
         else:
             self.hemisphere = hemisphere
 
-        self.sza = self.solar_zenith_angle()
+        self.sza = self.solar_zenith_angle2()
         self.sigma_h, self.sigma_p = self.conductance(sigma_h, sigma_p)
 
     def conductance(self, rf_sigma_h, rf_sigma_p):
@@ -565,7 +567,7 @@ class BetterModel(Model):
         # Set the Pedersen and Hall conductivities in the return flow region.
         _, _, _, mask = self.labda_by_region()
 
-        print("don't forget to change this back to a +=")
+        # TODO: Change this back to adding conductance rather than replacing conductance.
         sigma_h[mask, :] = rf_sigma_h
         sigma_p[mask, :] = rf_sigma_p
 
@@ -585,7 +587,7 @@ class BetterModel(Model):
             for j, _ in enumerate(self.theta):
                 # Pedersen current in latitude
                 j_p = l_theta * (self.e_labda[i - 1, j] * self.sigma_p[i - 1, j]
-                                    - self.e_labda[i, j] * self.sigma_p[i, j])
+                                 - self.e_labda[i, j] * self.sigma_p[i, j])
                 div_jp[0, j] += j_p / 2
                 div_jp[i, j] += j_p / 2
 
@@ -594,20 +596,20 @@ class BetterModel(Model):
                 # Pedersen current in longitude
 
                 j_p = -l_labda * ((self.e_theta[i, j_plus_1] * self.sigma_p[i, j_plus_1])
-                                    - (self.e_theta[i, j] * self.sigma_p[i, j]))
+                                  - (self.e_theta[i, j] * self.sigma_p[i, j]))
                 div_jp[i, j] += j_p / 2.
                 div_jp[i, j_plus_1] += j_p / 2.
 
                 # Hall current in latitude
                 j_h = l_theta * ((self.e_theta[i - 1, j] * self.sigma_h[i - 1, j])
-                                    - (self.e_theta[i, j] * self.sigma_h[i, j]))
+                                 - (self.e_theta[i, j] * self.sigma_h[i, j]))
 
                 div_jh[0, j] += j_h / 2
                 div_jh[i, j] += j_h / 2
 
                 # Hall current in longitude
                 j_h = l_labda * ((self.e_labda[i, j_plus_1] * self.sigma_h[i, j_plus_1])
-                                    - (self.e_labda[i, j] * self.sigma_h[i, j]))
+                                 - (self.e_labda[i, j] * self.sigma_h[i, j]))
 
                 div_jh[i, j] += j_h / 2
                 div_jh[i, j_plus_1] += j_h / 2
@@ -642,8 +644,9 @@ class BetterModel(Model):
         if self.hemisphere == "south":
             lat_grid *= -1
 
+        # TODO: Work out why we subtract 5 or 17 hours from the time.
         loc = EarthLocation.from_geodetic(lon_grid, lat_grid, alt_grid)
-        altitude_azimuth = AltAz(obstime=time, location=loc)
+        altitude_azimuth = AltAz(obstime=time - dt.timedelta(hours=17), location=loc)
         angle = get_sun(time).transform_to(altitude_azimuth).zen.radian
 
         return angle
