@@ -1,8 +1,6 @@
 import datetime as dt
 import numpy as np
 import warnings
-from astropy.coordinates import get_sun, AltAz, EarthLocation
-from astropy.time import Time
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
@@ -553,13 +551,15 @@ class BetterModel(Model):
 
         self.f_107 = f_107
         self.time = time
+        self._ut_subtract = dt.timedelta(hours=17)
         if hemisphere not in {"north", "south"}:
             raise ValueError("Hemisphere must be \"north\" or \"south\".")
         else:
             self.hemisphere = hemisphere
 
-        self.sza = self.solar_zenith_angle2()
+        self.sza = self.solar_zenith_angle()
         self.sigma_h, self.sigma_p = self.conductance(sigma_h, sigma_p)
+        self.div_jp, self.div_jh, self.fac = self.currents()
 
     def conductance(self, rf_sigma_h, rf_sigma_p):
         sigma_h, sigma_p = self.quiet_time_conductance()
@@ -582,7 +582,7 @@ class BetterModel(Model):
             if i == 0:
                 continue
 
-            l_theta = (2 * np.pi * self._r_e * np.sin(labda) / 180.)
+            l_theta = (2 * np.pi * self._r_e * np.sin(labda) / 360.)
 
             for j, _ in enumerate(self.theta):
                 # Pedersen current in latitude
@@ -594,7 +594,6 @@ class BetterModel(Model):
                 j_plus_1 = (j + 1) % 360
 
                 # Pedersen current in longitude
-
                 j_p = -l_labda * ((self.e_theta[i, j_plus_1] * self.sigma_p[i, j_plus_1])
                                   - (self.e_theta[i, j] * self.sigma_p[i, j]))
                 div_jp[i, j] += j_p / 2.
@@ -634,44 +633,24 @@ class BetterModel(Model):
         return sigma_h, sigma_p
 
     def solar_zenith_angle(self):
-        """Calculate the solar zenith angle using AstroPy."""
-        time = Time(self.time)
-
-        lat_grid = 90 - np.broadcast_to(self.colat, (self._n_theta, self._n_labda)).T
-        lon_grid = 15 * np.broadcast_to(self.mlt, (self._n_labda, self._n_theta))
-        alt_grid = np.ones_like(lat_grid) * 780
-
-        if self.hemisphere == "south":
-            lat_grid *= -1
-
-        # TODO: Work out why we subtract 5 or 17 hours from the time.
-        loc = EarthLocation.from_geodetic(lon_grid, lat_grid, alt_grid)
-        altitude_azimuth = AltAz(obstime=time - dt.timedelta(hours=17), location=loc)
-        angle = get_sun(time).transform_to(altitude_azimuth).zen.radian
-
-        return angle
-
-    def solar_zenith_angle2(self):
-        ut = self.time.hour
-
+        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
         labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
+
+        doy = self.time.timetuple().tm_yday
+        ut = self.time.hour
 
         season_tilt = 23.5
         diurnal_tilt = 10.0
 
-        doy = self.time.timetuple().tm_yday
+        solstice = {"north": 172, "south": 356}
+        noon = {"north": 17, "south": 5}
 
-        if self.hemisphere == "north":
-            sun_tilt = np.radians(season_tilt * np.cos(2 * np.pi * (doy - 173.) / 365)
-                                  + diurnal_tilt * np.cos(2 * np.pi * (ut - 17) / 24))
-        else:
-            sun_tilt = np.radians(season_tilt * np.cos(2 * np.pi * (doy - 173. + 365 / 2.) / 365)
-                                  + diurnal_tilt * np.cos(2 * np.pi * (ut - 5) / 24))
+        declination = np.radians(season_tilt * np.cos(2 * np.pi * (doy - solstice[self.hemisphere]) / 365)
+                                 + diurnal_tilt * np.cos(2 * np.pi * (ut - noon[self.hemisphere]) / 24))
 
-        r_hat = [-np.sin(labda_grid) * np.cos(theta_grid),
-                 np.sin(labda_grid) * np.sin(theta_grid),
-                 np.cos(labda_grid)]
-        angle = np.arccos(r_hat[0] * np.cos(sun_tilt) + r_hat[2] * np.sin(sun_tilt))
+        # See p. 6 of lab book for the derivation of this form of Z from Bonan.
+        z = np.arccos((np.cos(labda_grid) * np.sin(declination))
+                      - (np.sin(labda_grid) * np.cos(declination) * np.cos(theta_grid)))
 
-        return angle
+        return z
