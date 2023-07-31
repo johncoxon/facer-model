@@ -6,6 +6,7 @@
 *.gz
 *.pickle
 *.zarr*
+*.sav
 
 # Exclude plots
 *.png
