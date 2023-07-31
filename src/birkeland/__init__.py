@@ -576,22 +576,22 @@ class BetterModel(Model):
     def currents(self):
         div_jp = np.zeros_like(self.sigma_h)
         div_jh = np.zeros_like(self.sigma_h)
-        l_labda = (2 * np.pi * self._r_e / 360.)
+        l_labda = (2 * np.pi * self._r_e / self.theta_n)
 
         for i, labda in enumerate(self.labda):
             if i == 0:
                 continue
 
-            l_theta = (2 * np.pi * self._r_e * np.sin(labda) / 360.)
+            l_theta = (2 * np.pi * self._r_e * np.sin(labda) / self._n_theta)
 
             for j, _ in enumerate(self.theta):
+                j_plus_1 = (j + 1) % 360
+
                 # Pedersen current in latitude
                 j_p = l_theta * (self.e_labda[i - 1, j] * self.sigma_p[i - 1, j]
                                  - self.e_labda[i, j] * self.sigma_p[i, j])
                 div_jp[0, j] += j_p / 2
                 div_jp[i, j] += j_p / 2
-
-                j_plus_1 = (j + 1) % 360
 
                 # Pedersen current in longitude
                 j_p = -l_labda * ((self.e_theta[i, j_plus_1] * self.sigma_p[i, j_plus_1])
@@ -622,6 +622,7 @@ class BetterModel(Model):
         sigma_h = np.zeros_like(self.sza)
         sigma_p = np.zeros_like(self.sza)
 
+        # The contribution from anything on the nightside is 0, so only compute on the dayside.
         day_mask = self.sza < np.pi / 2.
         sza_day = self.sza[day_mask]
 
