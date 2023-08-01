@@ -576,7 +576,7 @@ class BetterModel(Model):
     def currents(self):
         div_jp = np.zeros_like(self.sigma_h)
         div_jh = np.zeros_like(self.sigma_h)
-        l_labda = (2 * np.pi * self._r_e / self.theta_n)
+        l_labda = (2 * np.pi * self._r_e / self._n_theta)
 
         for i, labda in enumerate(self.labda):
             if i == 0:
@@ -641,14 +641,12 @@ class BetterModel(Model):
         doy = self.time.timetuple().tm_yday
         ut = self.time.hour
 
-        season_tilt = 23.5
-        diurnal_tilt = 10.0
-
         solstice = {"north": 172, "south": 356}
         noon = {"north": 17, "south": 5}
+        h = self.hemisphere
 
-        declination = np.radians(season_tilt * np.cos(2 * np.pi * (doy - solstice[self.hemisphere]) / 365)
-                                 + diurnal_tilt * np.cos(2 * np.pi * (ut - noon[self.hemisphere]) / 24))
+        declination = np.radians(23.5 * np.cos(2 * np.pi * (doy - solstice[h]) / 365.25)
+                                 + 10 * np.cos(2 * np.pi * (ut - noon[h]) / 24))
 
         # See p. 6 of lab book for the derivation of this form of Z from Bonan.
         z = np.arccos((np.cos(labda_grid) * np.sin(declination))
