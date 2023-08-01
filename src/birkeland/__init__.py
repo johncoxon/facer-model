@@ -380,17 +380,17 @@ class Model(object):
         phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
         ax.contour(self.theta, self.colat, self.phi, levels=phi_contours, colors="black")
 
-    def map_current(self, ax, vlim=100):
+    def map_current(self, ax, vlim=100, cmap="RdBu_r", **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap="RdBu_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         self.draw_potential_contours(ax)
         self._configure_polar_plot(ax, 30)
 
         return mesh
 
-    def map_electric_field(self, ax, component, vlim=50):
+    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", **kwargs):
         """Plot a map of the electric field in either component as in Figure 2e-h."""
         if component == "labda":
             e_field = self.e_labda
@@ -401,8 +401,8 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         ax.set_ylabel(y_label, labelpad=20)
         self.draw_potential_contours(ax)
@@ -410,17 +410,17 @@ class Model(object):
 
         return mesh
 
-    def map_electric_potential(self, ax, vlim=30):
+    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", **kwargs):
         """Plot a map of the electric potential."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         self.draw_potential_contours(ax)
         self._configure_polar_plot(ax, 30)
 
         return mesh
 
-    def map_flow_vector(self, ax, component, vlim=750):
+    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", **kwargs):
         """Plot a map of the ionospheric flow vector."""
         if component == "labda":
             flow_vector = self.v_labda
@@ -431,8 +431,8 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         ax.set_ylabel(y_label, labelpad=20)
         self.draw_potential_contours(ax)
