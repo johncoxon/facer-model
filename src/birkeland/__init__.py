@@ -557,23 +557,58 @@ class BetterModel(Model):
         else:
             self.hemisphere = hemisphere
 
-        self.sza = self.solar_zenith_angle()
-        self.sigma_h, self.sigma_p = self.conductance(sigma_h, sigma_p)
-        self.div_jp, self.div_jh, self.fac = self.currents()
+        self.sza = self.sza_grid()
+        self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
+        self.div_jp, self.div_jh = self.div_j_grid()
 
-    def conductance(self, rf_sigma_h, rf_sigma_p):
-        sigma_h, sigma_p = self.quiet_time_conductance()
+    def sza_grid(self):
+        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
+        labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
+        theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
-        # Set the Pedersen and Hall conductivities in the return flow region.
-        _, _, _, mask = self.labda_by_region()
+        doy = self.time.timetuple().tm_yday
+        ut = self.time.hour
 
-        # TODO: Change this back to adding conductance rather than replacing conductance.
-        sigma_h[mask, :] = rf_sigma_h
-        sigma_p[mask, :] = rf_sigma_p
+        solstice = {"north": 172, "south": 356}
+        noon = {"north": 17, "south": 5}
+        h = self.hemisphere
+
+        declination = np.radians(23.5 * np.cos(2 * np.pi * (doy - solstice[h]) / 365.25)
+                                 + 10 * np.cos(2 * np.pi * (ut - noon[h]) / 24))
+
+        # See p. 6 of lab book for the derivation of this form of Z from Bonan.
+        z = np.arccos((np.cos(labda_grid) * np.sin(declination))
+                      - (np.sin(labda_grid) * np.cos(declination) * np.cos(theta_grid)))
+
+        return z
+
+    def sigma_q_grid(self):
+        """Quiet-time sigma_grid calculated from Moen and Brekke (1993)."""
+        sigma_h = np.zeros_like(self.sza)
+        sigma_p = np.zeros_like(self.sza)
+
+        # The contribution from anything on the nightside is 0, so only compute on the dayside.
+        day_mask = self.sza < np.pi / 2.
+        sza_day = self.sza[day_mask]
+
+        sigma_h[day_mask] = (self.f_107 ** 0.53) * ((0.81 * np.cos(sza_day))
+                                                    + (0.54 * np.sqrt(np.cos(sza_day))))
+        sigma_p[day_mask] = (self.f_107 ** 0.49) * ((0.34 * np.cos(sza_day))
+                                                    + (0.93 * np.sqrt(np.cos(sza_day))))
 
         return sigma_h, sigma_p
 
-    def currents(self):
+    def sigma_grid(self, rf_sigma_h, rf_sigma_p):
+        sigma_h, sigma_p = self.sigma_q_grid()
+
+        # Set the Pedersen and Hall conductivities in the return flow region.
+        _, _, _, mask = self.labda_by_region()
+        sigma_h[mask, :] += rf_sigma_h
+        sigma_p[mask, :] += rf_sigma_p
+
+        return sigma_h, sigma_p
+
+    def div_j_grid(self):
         div_jp = np.zeros_like(self.sigma_h)
         div_jh = np.zeros_like(self.sigma_h)
         l_labda = (2 * np.pi * self._r_e / self._n_theta)
@@ -613,43 +648,4 @@ class BetterModel(Model):
                 div_jh[i, j] += j_h / 2
                 div_jh[i, j_plus_1] += j_h / 2
 
-        fac = div_jp + div_jh
-
-        return div_jp, div_jh, fac
-
-    def quiet_time_conductance(self):
-        """Quiet-time conductance calculated from Moen and Brekke (1993)."""
-        sigma_h = np.zeros_like(self.sza)
-        sigma_p = np.zeros_like(self.sza)
-
-        # The contribution from anything on the nightside is 0, so only compute on the dayside.
-        day_mask = self.sza < np.pi / 2.
-        sza_day = self.sza[day_mask]
-
-        sigma_h[day_mask] = (self.f_107 ** 0.53) * ((0.81 * np.cos(sza_day))
-                                                    + (0.54 * np.sqrt(np.cos(sza_day))))
-        sigma_p[day_mask] = (self.f_107 ** 0.49) * ((0.34 * np.cos(sza_day))
-                                                    + (0.93 * np.sqrt(np.cos(sza_day))))
-
-        return sigma_h, sigma_p
-
-    def solar_zenith_angle(self):
-        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
-        labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
-        theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
-
-        doy = self.time.timetuple().tm_yday
-        ut = self.time.hour
-
-        solstice = {"north": 172, "south": 356}
-        noon = {"north": 17, "south": 5}
-        h = self.hemisphere
-
-        declination = np.radians(23.5 * np.cos(2 * np.pi * (doy - solstice[h]) / 365.25)
-                                 + 10 * np.cos(2 * np.pi * (ut - noon[h]) / 24))
-
-        # See p. 6 of lab book for the derivation of this form of Z from Bonan.
-        z = np.arccos((np.cos(labda_grid) * np.sin(declination))
-                      - (np.sin(labda_grid) * np.cos(declination) * np.cos(theta_grid)))
-
-        return z
+        return div_jp, div_jh
