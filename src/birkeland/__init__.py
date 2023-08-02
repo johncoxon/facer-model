@@ -619,12 +619,12 @@ class BetterModel(Model):
         j_plus_1 = np.concatenate((np.arange(359) + 1, [0]))
 
         j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
-                                   - self.e_labda[1:, :] * self.sigma_p[1:, :])
+                                      - self.e_labda[1:, :] * self.sigma_p[1:, :])
         j_p_theta = -l_labda * (self.e_theta[:, j_plus_1] * self.sigma_p[:, j_plus_1]
                                 - self.e_theta[:, :] * self.sigma_p[:, :])
 
         j_h_labda = l_theta[1:, :] * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
-                                   - self.e_theta[1:, :] * self.sigma_h[1:, :])
+                                      - self.e_theta[1:, :] * self.sigma_h[1:, :])
         j_h_theta = l_labda * (self.e_labda[:, j_plus_1] * self.sigma_h[:, j_plus_1]
                                - self.e_labda[:, :] * self.sigma_h[:, :])
 
