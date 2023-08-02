@@ -1,45 +1,48 @@
 import numpy as np
+import unittest
 from birkeland import Model, BetterModel
 from datetime import datetime
 from pandas import read_csv
 from pathlib import Path
-from unittest import TestCase
+import pytest
 
 
-class TestBirkeland(TestCase):
-    def test_model(self, model_type="model"):
-        if model_type == "model":
-            error_prefix = f"Model, "
-        else:
-            error_prefix = f"BetterModel, h={model_type}, "
-
-        filename = f"test_data_{model_type}.csv"
-
-        benchmarks = read_csv(Path(__file__).parent / filename)
-        examples = []
+class TestBirkeland(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        examples = {"model": [], "north": [], "south": []}
+        benchmarks = {}
 
         f_107 = 100
 
-        for cnt, row in benchmarks.iterrows():
-            if model_type == "model":
-                examples.append(Model(row["phi_d"], row["phi_n"], row["f_pc"]))
-            else:
-                examples.append(BetterModel(row["phi_d"], row["phi_n"], f_107,
-                                            datetime(2010, 1, 1), model_type, f_pc=row["f_pc"]))
+        for t in examples:
+            filename = f"test_data_{t}.csv"
+            benchmarks[t] = read_csv(Path(__file__).parent / filename)
 
-        examples = np.array(examples)
+            for cnt, row in benchmarks[t].iterrows():
+                if t == "model":
+                    examples[t].append(Model(row["phi_d"], row["phi_n"], row["f_pc"]))
+                else:
+                    examples[t].append(BetterModel(row["phi_d"], row["phi_n"], f_107,
+                                                   datetime(2010, 1, 1), t, f_pc=row["f_pc"]))
 
-        data, methods, grids = create_test_set(examples, model_type=model_type)
+            examples[t] = np.array(examples[t])
+
+        cls.benchmarks = benchmarks
+        cls.examples = examples
+
+    def test_model(self, model_type="model"):
+        data, methods, grids = create_test_set(self.examples[model_type], model_type=model_type)
 
         for key in methods:
-            np.testing.assert_allclose(data[key], benchmarks[key].values,
-                                       err_msg=error_prefix + key)
+            with self.subTest(msg=f"{model_type}, {key}"):
+                np.testing.assert_allclose(data[key], self.benchmarks[model_type][key].values)
 
-        for key in grids:
-            np.testing.assert_allclose(data[f"{key}_mean"], benchmarks[f"{key}_mean"].values,
-                                       err_msg=error_prefix + f"{key} mean")
-            np.testing.assert_allclose(data[f"{key}_sum"], benchmarks[f"{key}_sum"].values,
-                                       err_msg=error_prefix + f"{key} sum")
+        for grid in grids:
+            for key in [f"{grid}_mean", f"{grid}_sum"]:
+                with self.subTest(msg=f"{model_type}, {key}"):
+                    np.testing.assert_allclose(data[f"{key}"],
+                                               self.benchmarks[model_type][f"{key}"].values)
 
     def test_north(self):
         self.test_model(model_type="north")

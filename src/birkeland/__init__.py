@@ -616,8 +616,6 @@ class BetterModel(Model):
         l_theta = np.expand_dims((2 * np.pi * self._r_e * np.sin(self.labda) / self._n_theta),
                                  axis=1)
 
-        print(l_theta)
-
         j_plus_1 = np.concatenate((np.arange(359) + 1, [0]))
 
         j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
