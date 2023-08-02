@@ -1,3 +1,4 @@
+import datetime as dt
 import numpy as np
 import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
@@ -132,7 +133,7 @@ class Model(object):
         condition3 = np.pi + self.theta_d
         condition4 = 2 * np.pi - self.theta_n
         condition5 = 2 * np.pi
-        
+
         # These are the five different combinations of conditions in Table 1.
         mask1 = ((self.theta >= condition0) & (self.theta < condition1))
         mask2 = ((self.theta >= condition1) & (self.theta < condition2))
@@ -379,17 +380,17 @@ class Model(object):
         phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
         ax.contour(self.theta, self.colat, self.phi, levels=phi_contours, colors="black")
 
-    def map_current(self, ax, vlim=100):
+    def map_current(self, ax, vlim=100, cmap="RdBu_r", **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap="RdBu_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         self.draw_potential_contours(ax)
         self._configure_polar_plot(ax, 30)
 
         return mesh
 
-    def map_electric_field(self, ax, component, vlim=50):
+    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", **kwargs):
         """Plot a map of the electric field in either component as in Figure 2e-h."""
         if component == "labda":
             e_field = self.e_labda
@@ -400,8 +401,8 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         ax.set_ylabel(y_label, labelpad=20)
         self.draw_potential_contours(ax)
@@ -409,17 +410,17 @@ class Model(object):
 
         return mesh
 
-    def map_electric_potential(self, ax, vlim=30):
+    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", **kwargs):
         """Plot a map of the electric potential."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         self.draw_potential_contours(ax)
         self._configure_polar_plot(ax, 30)
 
         return mesh
 
-    def map_flow_vector(self, ax, component, vlim=750):
+    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", **kwargs):
         """Plot a map of the ionospheric flow vector."""
         if component == "labda":
             flow_vector = self.v_labda
@@ -430,8 +431,8 @@ class Model(object):
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap="PuOr_r",
-                             vmin=-vlim, vmax=vlim, shading="nearest")
+        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap=cmap,
+                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
 
         ax.set_ylabel(y_label, labelpad=20)
         self.draw_potential_contours(ax)
@@ -499,6 +500,7 @@ class Model(object):
     @staticmethod
     def _configure_polar_plot(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
         """Configures a polar plot with midnight at the bottom and sensible labelling."""
+
         def format_mlt():
             """Return MLT in hours rather than a number of degrees when drawing axis labels."""
 
@@ -540,3 +542,100 @@ class Model(object):
     def _csch(x):
         """Used in Equations 29 and 31."""
         return 1 / np.sinh(x)
+
+
+class BetterModel(Model):
+    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7, **kwargs):
+        """Milan (2013) model expanded with the Moen and Brekke (1993) model"""
+        Model.__init__(self, phi_d, phi_n, **kwargs)
+
+        self.f_107 = f_107
+        self.time = time
+        self._ut_subtract = dt.timedelta(hours=17)
+        if hemisphere not in {"north", "south"}:
+            raise ValueError("Hemisphere must be \"north\" or \"south\".")
+        else:
+            self.hemisphere = hemisphere
+
+        self.sza = self.sza_grid()
+        self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
+        self.div_jp, self.div_jh = self.div_j_grid()
+
+    def sza_grid(self):
+        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
+        labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
+        theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
+
+        doy = self.time.timetuple().tm_yday
+        ut = self.time.hour
+
+        solstice = {"north": 172, "south": 356}
+        noon = {"north": 17, "south": 5}
+        h = self.hemisphere
+
+        declination = np.radians(23.5 * np.cos(2 * np.pi * (doy - solstice[h]) / 365.25)
+                                 + 10 * np.cos(2 * np.pi * (ut - noon[h]) / 24))
+
+        # See p. 6 of lab book for the derivation of this form of Z from Bonan.
+        z = np.arccos((np.cos(labda_grid) * np.sin(declination))
+                      - (np.sin(labda_grid) * np.cos(declination) * np.cos(theta_grid)))
+
+        return z
+
+    def sigma_q_grid(self):
+        """Quiet-time sigma_grid calculated from Moen and Brekke (1993)."""
+        sigma_h = np.zeros_like(self.sza)
+        sigma_p = np.zeros_like(self.sza)
+
+        # The contribution from anything on the nightside is 0, so only compute on the dayside.
+        day_mask = self.sza < np.pi / 2.
+        sza_day = self.sza[day_mask]
+
+        sigma_h[day_mask] = (self.f_107 ** 0.53) * ((0.81 * np.cos(sza_day))
+                                                    + (0.54 * np.sqrt(np.cos(sza_day))))
+        sigma_p[day_mask] = (self.f_107 ** 0.49) * ((0.34 * np.cos(sza_day))
+                                                    + (0.93 * np.sqrt(np.cos(sza_day))))
+
+        return sigma_h, sigma_p
+
+    def sigma_grid(self, rf_sigma_h, rf_sigma_p):
+        sigma_h, sigma_p = self.sigma_q_grid()
+
+        # Set the Pedersen and Hall conductivities in the return flow region.
+        _, _, _, mask = self.labda_by_region()
+        sigma_h[mask, :] += rf_sigma_h
+        sigma_p[mask, :] += rf_sigma_p
+
+        return sigma_h, sigma_p
+
+    def div_j_grid(self):
+        div_jp = np.zeros_like(self.sigma_p)
+        div_jh = np.zeros_like(self.sigma_h)
+
+        l_labda = (2 * np.pi * self._r_e / self._n_theta)
+        l_theta = np.expand_dims((2 * np.pi * self._r_e * np.sin(self.labda) / self._n_theta),
+                                 axis=1)
+
+        j_plus_1 = np.concatenate((np.arange(359) + 1, [0]))
+
+        j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
+                                      - self.e_labda[1:, :] * self.sigma_p[1:, :])
+        j_p_theta = -l_labda * (self.e_theta[1:, j_plus_1] * self.sigma_p[1:, j_plus_1]
+                                - self.e_theta[1:, :] * self.sigma_p[1:, :])
+
+        j_h_labda = l_theta[1:, :] * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
+                                      - self.e_theta[1:, :] * self.sigma_h[1:, :])
+        j_h_theta = l_labda * (self.e_labda[1:, j_plus_1] * self.sigma_h[1:, j_plus_1]
+                               - self.e_labda[1:, :] * self.sigma_h[1:, :])
+
+        div_jp[:-1, :] += j_p_labda / 2
+        div_jp[1:, :] += j_p_labda / 2
+        div_jp[1:, :] += j_p_theta / 2
+        div_jp[1:, j_plus_1] += j_p_theta / 2
+
+        div_jh[:-1, :] += j_h_labda / 2
+        div_jh[1:, :] += j_h_labda / 2
+        div_jh[1:, :] += j_h_theta / 2
+        div_jh[1:, j_plus_1] += j_h_theta / 2
+
+        return div_jp, div_jh
