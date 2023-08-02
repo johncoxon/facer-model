@@ -41,30 +41,30 @@ def model_outputs(benchmarks):
 
 @pytest.mark.parametrize("b_r", (0, 5, 10, 15, 20, 25, 30))
 def test_b_r(b_r, benchmarks, model_outputs):
-    output = [e.b_r(b_r) for e in model_outputs["model"]]
+    output = np.array([e.b_r(b_r) for e in model_outputs["model"]])
     assert output == pytest.approx(benchmarks["model"][f"b_r_{b_r}"].values)
 
 
 @pytest.mark.parametrize("method", ("lambda_r1", "v_r1", "e_b", "e_d", "e_n"))
 def test_methods(method, benchmarks, model_outputs):
-    output = [getattr(e, method)() for e in model_outputs["model"]]
+    output = np.array([getattr(e, method)() for e in model_outputs["model"]])
     assert output == pytest.approx(benchmarks["model"][method].values)
 
 
 @pytest.mark.parametrize("grid", ("phi", "e_labda", "e_theta", "v_labda", "v_theta", "j"))
 def test_model(grid, benchmarks, model_outputs):
-    mean_output = [np.mean(np.abs(getattr(e, grid))) for e in model_outputs["model"]]
-    sum_output = [np.sum(np.abs(getattr(e, grid))) for e in model_outputs["model"]]
+    mean_output = np.array([np.mean(np.abs(getattr(e, grid))) for e in model_outputs["model"]])
+    sum_output = np.array([np.sum(np.abs(getattr(e, grid))) for e in model_outputs["model"]])
 
-    assert mean_output, pytest.approx(benchmarks["model"][f"{grid}_mean"].values)
-    assert sum_output, pytest.approx(benchmarks["model"][f"{grid}_sum"].values)
+    assert mean_output == pytest.approx(benchmarks["model"][f"{grid}_mean"].values)
+    assert sum_output == pytest.approx(benchmarks["model"][f"{grid}_sum"].values)
 
 
 @pytest.mark.parametrize("grid", ("sza", "sigma_h", "sigma_p", "div_jh", "div_jp"))
 @pytest.mark.parametrize("hemisphere", ("north", "south"))
 def test_better_model(grid, hemisphere, benchmarks, model_outputs):
-    mean_output = [np.mean(np.abs(getattr(e, grid))) for e in model_outputs[hemisphere]]
-    sum_output = [np.sum(np.abs(getattr(e, grid))) for e in model_outputs[hemisphere]]
+    mean_output = np.array([np.mean(np.abs(getattr(e, grid))) for e in model_outputs[hemisphere]])
+    sum_output = np.array([np.sum(np.abs(getattr(e, grid))) for e in model_outputs[hemisphere]])
 
     assert mean_output == pytest.approx(benchmarks[hemisphere][f"{grid}_mean"].values)
     assert sum_output == pytest.approx(benchmarks[hemisphere][f"{grid}_sum"].values)
