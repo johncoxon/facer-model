@@ -620,48 +620,22 @@ class BetterModel(Model):
 
         j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
                                       - self.e_labda[1:, :] * self.sigma_p[1:, :])
-        j_p_theta = -l_labda * (self.e_theta[:, j_plus_1] * self.sigma_p[:, j_plus_1]
-                                - self.e_theta[:, :] * self.sigma_p[:, :])
+        j_p_theta = -l_labda * (self.e_theta[1:, j_plus_1] * self.sigma_p[1:, j_plus_1]
+                                - self.e_theta[1:, :] * self.sigma_p[1:, :])
 
         j_h_labda = l_theta[1:, :] * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
                                       - self.e_theta[1:, :] * self.sigma_h[1:, :])
-        j_h_theta = l_labda * (self.e_labda[:, j_plus_1] * self.sigma_h[:, j_plus_1]
-                               - self.e_labda[:, :] * self.sigma_h[:, :])
+        j_h_theta = l_labda * (self.e_labda[1:, j_plus_1] * self.sigma_h[1:, j_plus_1]
+                               - self.e_labda[1:, :] * self.sigma_h[1:, :])
 
-        # div_jp[:-1, :] += j_p_labda / 2
-        # div_jp[1:, :] += j_p_labda / 2
-        # div_jp[:, :] += j_p_theta / 2
-        # div_jp[:, j_plus_1] += j_p_theta / 2
-        #
-        # div_jh[:-1, :] += j_h_labda / 2
-        # div_jh[1:, :] += j_h_labda / 2
-        # div_jh[:, :] += j_h_theta / 2
-        # div_jh[:, j_plus_1] += j_h_theta / 2
+        div_jp[:-1, :] += j_p_labda / 2
+        div_jp[1:, :] += j_p_labda / 2
+        div_jp[1:, :] += j_p_theta / 2
+        div_jp[1:, j_plus_1] += j_p_theta / 2
 
-        jp_lat = j_p_labda.flatten()
-        jp_lon = j_p_theta[1:, :].flatten()
-        jh_lat = j_h_labda.flatten()
-        jh_lon = j_h_theta[1:, :].flatten()
-
-        cnt = 0
-
-        for i, _ in enumerate(self.labda):
-            if i == 0:
-                continue
-
-            for j, _ in enumerate(self.theta):
-                div_jp[i - 1, j] += jp_lat[cnt] / 2
-                div_jp[i, j] += jp_lat[cnt] / 2
-
-                div_jp[i, j] += jp_lon[cnt] / 2.
-                div_jp[i, j_plus_1[j]] += jp_lon[cnt] / 2.
-
-                div_jh[i - 1, j] += jh_lat[cnt] / 2
-                div_jh[i, j] += jh_lat[cnt] / 2
-
-                div_jh[i, j] += jh_lon[cnt] / 2
-                div_jh[i, j_plus_1[j]] += jh_lon[cnt] / 2
-
-                cnt += 1
+        div_jh[:-1, :] += j_h_labda / 2
+        div_jh[1:, :] += j_h_labda / 2
+        div_jh[1:, :] += j_h_theta / 2
+        div_jh[1:, j_plus_1] += j_h_theta / 2
 
         return div_jp, div_jh
