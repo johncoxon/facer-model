@@ -2,7 +2,6 @@ import datetime as dt
 import numpy as np
 import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
-from pandas import DataFrame
 
 
 class Model(object):
@@ -629,20 +628,40 @@ class BetterModel(Model):
         j_h_theta = l_labda * (self.e_labda[:, j_plus_1] * self.sigma_h[:, j_plus_1]
                                - self.e_labda[:, :] * self.sigma_h[:, :])
 
-        div_jp[:-1, :] += j_p_labda / 2
-        div_jp[1:, :] += j_p_labda / 2
-        div_jp[:, :] += j_p_theta / 2
-        div_jp[:, j_plus_1] += j_p_theta / 2
+        # div_jp[:-1, :] += j_p_labda / 2
+        # div_jp[1:, :] += j_p_labda / 2
+        # div_jp[:, :] += j_p_theta / 2
+        # div_jp[:, j_plus_1] += j_p_theta / 2
+        #
+        # div_jh[:-1, :] += j_h_labda / 2
+        # div_jh[1:, :] += j_h_labda / 2
+        # div_jh[:, :] += j_h_theta / 2
+        # div_jh[:, j_plus_1] += j_h_theta / 2
 
-        div_jh[:-1, :] += j_h_labda / 2
-        div_jh[1:, :] += j_h_labda / 2
-        div_jh[:, :] += j_h_theta / 2
-        div_jh[:, j_plus_1] += j_h_theta / 2
+        jp_lat = j_p_labda.flatten()
+        jp_lon = j_p_theta[1:, :].flatten()
+        jh_lat = j_h_labda.flatten()
+        jh_lon = j_h_theta[1:, :].flatten()
 
-        dataframe = DataFrame({"j_p_latitude": j_p_labda.flatten(),
-                               "j_p_longitude": j_p_theta[1:, :].flatten(),
-                               "j_h_latitude": j_h_labda.flatten(),
-                               "j_h_longitude": j_h_theta[1:, :].flatten()})
-        dataframe.to_csv("/Users/John/Desktop/dataframe_new.csv")
+        cnt = 0
+
+        for i, _ in enumerate(self.labda):
+            if i == 0:
+                continue
+
+            for j, _ in enumerate(self.theta):
+                div_jp[i - 1, j] += jp_lat[cnt] / 2
+                div_jp[i, j] += jp_lat[cnt] / 2
+
+                div_jp[i, j] += jp_lon[cnt] / 2.
+                div_jp[i, j_plus_1[j]] += jp_lon[cnt] / 2.
+
+                div_jh[i - 1, j] += jh_lat[cnt] / 2
+                div_jh[i, j] += jh_lat[cnt] / 2
+
+                div_jh[i, j] += jh_lon[cnt] / 2
+                div_jh[i, j_plus_1[j]] += jh_lon[cnt] / 2
+
+                cnt += 1
 
         return div_jp, div_jh
