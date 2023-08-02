@@ -2,6 +2,7 @@ import datetime as dt
 import numpy as np
 import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
+from pandas import DataFrame
 
 
 class Model(object):
@@ -637,5 +638,11 @@ class BetterModel(Model):
         div_jh[1:, :] += j_h_labda / 2
         div_jh[:, :] += j_h_theta / 2
         div_jh[:, j_plus_1] += j_h_theta / 2
+
+        dataframe = DataFrame({"j_p_latitude": j_p_labda.flatten(),
+                               "j_p_longitude": j_p_theta[1:, :].flatten(),
+                               "j_h_latitude": j_h_labda.flatten(),
+                               "j_h_longitude": j_h_theta[1:, :].flatten()})
+        dataframe.to_csv("/Users/John/Desktop/dataframe_new.csv")
 
         return div_jp, div_jh
