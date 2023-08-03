@@ -588,6 +588,7 @@ class Model(BaseModel):
         self.sza = self.sza_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
         self.div_jp, self.div_jh = self.div_j_grid()
+        self.j = self.j_total()
 
     def sza_grid(self):
         """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
@@ -668,33 +669,30 @@ class Model(BaseModel):
         div_jp = np.zeros_like(self.sigma_p)
         div_jh = np.zeros_like(self.sigma_h)
 
-        l_labda = (2 * np.pi * self._r_e / self._n_theta)
-        l_theta = np.expand_dims((2 * np.pi * self._r_e * np.sin(self.labda) / self._n_theta),
-                                 axis=1)
-
+        sin_colat = np.sin(np.radians(self.colat[:-1] + 0.5))
         j_plus_1 = np.concatenate((np.arange(359) + 1, [0]))
 
-        j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
-                                      - self.e_labda[1:, :] * self.sigma_p[1:, :])
+        l_labda = (2 * np.pi * self._r_e / self._n_theta)
+        l_theta = np.expand_dims((2 * np.pi * self._r_e * sin_colat / self._n_theta), axis=1)
+
+        j_p_labda = l_theta * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
+                               - self.e_labda[1:, :] * self.sigma_p[1:, :])
         j_p_theta = -l_labda * (self.e_theta[1:, j_plus_1] * self.sigma_p[1:, j_plus_1]
                                 - self.e_theta[1:, :] * self.sigma_p[1:, :])
 
-        j_h_labda = l_theta[1:, :] * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
-                                      - self.e_theta[1:, :] * self.sigma_h[1:, :])
+        j_h_labda = l_theta * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
+                               - self.e_theta[1:, :] * self.sigma_h[1:, :])
         j_h_theta = l_labda * (self.e_labda[1:, j_plus_1] * self.sigma_h[1:, j_plus_1]
                                - self.e_labda[1:, :] * self.sigma_h[1:, :])
 
-        div_jp[:-1, :] += j_p_labda / 2
-        div_jp[1:, :] += j_p_labda / 2
-        div_jp[1:, :] += j_p_theta / 2
-        div_jp[1:, j_plus_1] += j_p_theta / 2
-
-        div_jh[:-1, :] += j_h_labda / 2
-        div_jh[1:, :] += j_h_labda / 2
-        div_jh[1:, :] += j_h_theta / 2
-        div_jh[1:, j_plus_1] += j_h_theta / 2
+        div_jp[1:, :] = j_p_labda + j_p_theta
+        div_jh[1:, :] = j_h_labda + j_h_theta
 
         return div_jp, div_jh
+
+    def j_total(self):
+        div_j_total = self.div_jp + self.div_jh
+        return np.sum(div_j_total[div_j_total > 0]) - np.sum(div_j_total[div_j_total < 0])
 
     def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
                                **kwargs):
