@@ -71,7 +71,7 @@ for cnt_d, phi_d in enumerate(phi_d_values):
 
             for t in ["north", "south"]:
                 model_outputs[t][cnt_d, cnt_n, cnt_f] = BetterModel(phi_d, phi_n, f_107,
-                                                                    datetime(2010, 1, 1),
+                                                                    datetime(2010, 1, 1, 17),
                                                                     t, f_pc=f_pc)
 
             test_data["phi_d"].append(phi_d)

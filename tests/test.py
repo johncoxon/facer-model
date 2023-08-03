@@ -41,7 +41,7 @@ def better_model_outputs(benchmarks):
 
         for cnt, row in benchmarks["model"].iterrows():
             better_model_outputs[h].append(BetterModel(row["phi_d"], row["phi_n"], f_107,
-                                           datetime(2010, 1, 1), h, f_pc=row["f_pc"]))
+                                           datetime(2010, 1, 1, 17), h, f_pc=row["f_pc"]))
         better_model_outputs[h] = np.array(better_model_outputs[h])
 
     return better_model_outputs
