@@ -1,6 +1,6 @@
-# Create a csv file which can be used for unit testing the Model class.
+# Create a csv file which can be used for unit testing the BaseModel class.
 import numpy as np
-from birkeland import BetterModel, Model
+from birkeland import BaseModel, Model
 from datetime import datetime
 from pandas import DataFrame
 from pathlib import Path
@@ -14,14 +14,15 @@ def create_test_set(examples, model_type="model"):
     Parameters
     ----------
     examples : np.ndarray
-        An array of Model or BetterModel.
+        An array of BaseModel or Model.
     model_type : basestring, optional, default "model"
-        Create tests for BetterModel.
+        If "model", create tests for BaseModel.
+        If "north" or "south", create tests for Model with that hemisphere.
 
     Returns
     -------
     test_dictionary : dict
-        A dictionary containing keys and the outputs for each key from the input array of Model.
+        A dictionary containing keys and the outputs for each key from the input array.
     """
     dictionary = {}
 
@@ -67,12 +68,12 @@ f_107 = 100
 for cnt_d, phi_d in enumerate(phi_d_values):
     for cnt_n, phi_n in enumerate(phi_n_values):
         for cnt_f, f_pc in enumerate(f_pc_values):
-            model_outputs["model"][cnt_d, cnt_n, cnt_f] = Model(phi_d, phi_n, f_pc=f_pc)
+            model_outputs["model"][cnt_d, cnt_n, cnt_f] = BaseModel(phi_d, phi_n, f_pc=f_pc)
 
             for t in ["north", "south"]:
-                model_outputs[t][cnt_d, cnt_n, cnt_f] = BetterModel(phi_d, phi_n, f_107,
-                                                                    datetime(2010, 1, 1, 17),
-                                                                    t, f_pc=f_pc)
+                model_outputs[t][cnt_d, cnt_n, cnt_f] = Model(phi_d, phi_n, f_107,
+                                                              datetime(2010, 1, 1, 17),
+                                                              t, f_pc=f_pc)
 
             test_data["phi_d"].append(phi_d)
             test_data["phi_n"].append(phi_n)

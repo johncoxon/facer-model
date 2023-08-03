@@ -3,7 +3,7 @@ import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
-class Model(object):
+class BaseModel(object):
     def __init__(self, phi_d, phi_n, f_pc=None, r1_colat=None, delta_colat=10,
                  theta_d=30, theta_n=30, sigma_pc=1, sigma_rf=1, order_n=20):
         """
@@ -543,12 +543,14 @@ class Model(object):
         return 1 / np.sinh(x)
 
 
-class BetterModel(Model):
+class Model(BaseModel):
     def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
                  precipitation_conductance="add", **kwargs):
         """
-        Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time conductance.
-        kwargs are passed onto the underlying Model class.
+        The Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time
+        conductance as employed by Coxon et al. (2016).
+
+        kwargs are passed onto the underlying BaseModel class.
 
         Parameters
         ----------
@@ -569,7 +571,7 @@ class BetterModel(Model):
                   (this is the original IDL behaviour).
             replace : Replace the quiet-time with the precipitation-driven conductances.
         """
-        Model.__init__(self, phi_d, phi_n, **kwargs)
+        BaseModel.__init__(self, phi_d, phi_n, **kwargs)
 
         self.f_107 = f_107
         self.time = time
@@ -589,7 +591,7 @@ class BetterModel(Model):
         self.div_jp, self.div_jh = self.div_j_grid()
 
     def sza_grid(self):
-        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
+        """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
         labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
@@ -610,7 +612,7 @@ class BetterModel(Model):
         return z
 
     def sigma_q_grid(self):
-        """Quiet-time sigma_grid calculated from Moen and Brekke (1993)."""
+        """Grids of quiet-time Hall and Pedersen conductance (Moen and Brekke, 1993)."""
         sigma_h = np.zeros_like(self.sza)
         sigma_p = np.zeros_like(self.sza)
 
@@ -626,6 +628,20 @@ class BetterModel(Model):
         return sigma_h, sigma_p
 
     def sigma_grid(self, rf_sigma_h, rf_sigma_p):
+        """
+        Combine the quiet-time grid from Moen and Brekke (1993) with the user-specified Hall and
+        Pedersen return-flow-region conductivities.
+
+        Parameters
+        ----------
+        rf_sigma_h, rf_sigma_p : float
+            The values of the Hall and Pedersen conductivities in the return flow region.
+
+        Returns
+        -------
+        sigma_h, sigma_p : np.ndarray
+            Arrays of the Hall and Pedersen conductivity on the model grid.
+        """
         sigma_h, sigma_p = self.sigma_q_grid()
 
         # Set the Pedersen and Hall conductivities in the return flow region.
@@ -649,6 +665,7 @@ class BetterModel(Model):
         return sigma_h, sigma_p
 
     def div_j_grid(self):
+        """Grids of the divergence of Hall and Pedersen current (calculated from E and sigma)."""
         div_jp = np.zeros_like(self.sigma_p)
         div_jh = np.zeros_like(self.sigma_h)
 

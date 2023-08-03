@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from birkeland import Model, BetterModel
+from birkeland import BaseModel, Model
 from datetime import datetime
 from pandas import read_csv
 from pathlib import Path
@@ -24,7 +24,7 @@ def model_outputs(benchmarks):
     model_outputs = []
 
     for cnt, row in benchmarks["model"].iterrows():
-        model_outputs.append(Model(row["phi_d"], row["phi_n"], row["f_pc"]))
+        model_outputs.append(BaseModel(row["phi_d"], row["phi_n"], row["f_pc"]))
 
     model_outputs = np.array(model_outputs)
 
@@ -40,7 +40,7 @@ def better_model_outputs(benchmarks):
         better_model_outputs[h] = []
 
         for cnt, row in benchmarks["model"].iterrows():
-            better_model_outputs[h].append(BetterModel(row["phi_d"], row["phi_n"], f_107,
+            better_model_outputs[h].append(Model(row["phi_d"], row["phi_n"], f_107,
                                            datetime(2010, 1, 1, 17), h, f_pc=row["f_pc"]))
         better_model_outputs[h] = np.array(better_model_outputs[h])
 
