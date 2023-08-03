@@ -374,68 +374,56 @@ class BaseModel(object):
 
         return j
 
+    @staticmethod
+    def _coth(x):
+        """Used in Equations 28 and 30."""
+        return np.cosh(x) / np.sinh(x)
+
+    @staticmethod
+    def _csch(x):
+        """Used in Equations 29 and 31."""
+        return 1 / np.sinh(x)
+
     def draw_potential_contours(self, ax):
         """Draw contours of the electric potential as in Figure 2e-j."""
         phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
         ax.contour(self.theta, self.colat, self.phi, levels=phi_contours, colors="black")
 
-    def map_current(self, ax, vlim=100, cmap="RdBu_r", **kwargs):
+    def map_current(self, ax, vlim=100, cmap="RdBu_r", contours=True, **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
-
+        mesh = self._plot_map(ax, self.j * 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
-    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", **kwargs):
+    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the electric field in either component as in Figure 2e-h."""
         if component == "labda":
-            e_field = self.e_labda
-            y_label = r"$\mathregular{E_\lambda}$"
+            e_field = self.e_labda * 1e3
         elif component == "theta":
-            e_field = self.e_theta
-            y_label = r"$\mathregular{E_\theta}$"
+            e_field = self.e_theta * 1e3
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        ax.set_ylabel(y_label, labelpad=20)
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
+        mesh = self._plot_map(ax, e_field, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
 
         return mesh
 
-    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", **kwargs):
+    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the electric potential."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
-
+        mesh = self._plot_map(ax, self.phi / 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
-    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", **kwargs):
+    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the ionospheric flow vector."""
         if component == "labda":
             flow_vector = self.v_labda
-            y_label = r"$\mathregular{V_\lambda}$"
         elif component == "theta":
             flow_vector = self.v_theta
-            y_label = r"$\mathregular{V_\theta}$"
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        ax.set_ylabel(y_label, labelpad=20)
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
+        mesh = self._plot_map(ax, flow_vector, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
 
         return mesh
 
@@ -497,7 +485,18 @@ class BaseModel(object):
         return cax
 
     @staticmethod
-    def _configure_polar_plot(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
+    def _annotate_map(ax, component):
+        if component == "labda":
+            annotation = r"$\mathregular{\lambda}$"
+        else:
+            annotation = r"$\mathregular{\theta}$"
+
+        ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
+                    xytext=(-5, -5), textcoords="offset points",
+                    fontsize="xx-large", ha="right", va="top")
+
+    @staticmethod
+    def _configure_map(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
         """Configures a polar plot with midnight at the bottom and sensible labelling."""
 
         def format_mlt():
@@ -532,15 +531,15 @@ class BaseModel(object):
 
         ax.grid(True)
 
-    @staticmethod
-    def _coth(x):
-        """Used in Equations 28 and 30."""
-        return np.cosh(x) / np.sinh(x)
+    def _plot_map(self, ax, variable, vmin, vmax, cmap, contours, **kwargs):
+        mesh = ax.pcolormesh(self.theta, self.colat, variable, cmap=cmap,
+                             vmin=vmin, vmax=vmax, shading="nearest", **kwargs)
 
-    @staticmethod
-    def _csch(x):
-        """Used in Equations 29 and 31."""
-        return 1 / np.sinh(x)
+        if contours:
+            self.draw_potential_contours(ax)
+        self._configure_map(ax, 30)
+
+        return mesh
 
 
 class Model(BaseModel):
@@ -696,3 +695,50 @@ class Model(BaseModel):
         div_jh[1:, j_plus_1] += j_h_theta / 2
 
         return div_jp, div_jh
+
+    def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
+                               **kwargs):
+        """Plot a map of the solar zenith angle."""
+        mesh = self._plot_map(ax, np.degrees(self.sza), vmin, vmax, cmap, contours, **kwargs)
+        return mesh
+
+    def map_sigma(self, ax, component, vmin=0, vmax=10, cmap="viridis", contours=True, **kwargs):
+        if component.lower() == "hall":
+            sigma = self.sigma_h
+        elif component.lower() == "pedersen":
+            sigma = self.sigma_p
+        else:
+            raise ValueError("Component must be \"hall\" or \"pedersen\".")
+
+        mesh = self._plot_map(ax, sigma, vmin, vmax, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
+
+        return mesh
+
+    def map_div_j(self, ax, component, vlim=3, cmap="RdBu_r", contours=True, **kwargs):
+        if component.lower() == "hall":
+            div_j = self.div_jh / 1e3
+        elif component.lower() == "pedersen":
+            div_j = self.div_jp / 1e3
+        else:
+            raise ValueError("Component must be \"hall\" or \"pedersen\".")
+
+        mesh = self._plot_map(ax, div_j, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
+
+        return mesh
+
+    @staticmethod
+    def _annotate_map(ax, component):
+        if component == "labda":
+            annotation = r"$\mathregular{\lambda}$"
+        elif component == "theta":
+            annotation = r"$\mathregular{\theta}$"
+        elif component.lower() == "hall":
+            annotation = "H"
+        else:
+            annotation = "P"
+
+        ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
+                    xytext=(-5, -5), textcoords="offset points",
+                    fontsize="xx-large", ha="right", va="top")
