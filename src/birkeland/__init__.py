@@ -545,7 +545,7 @@ class Model(object):
 
 class BetterModel(Model):
     def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
-                 additive_conductance=True, **kwargs):
+                 precipitation_conductance="add", **kwargs):
         """
         Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time conductance.
         kwargs are passed onto the underlying Model class.
@@ -560,20 +560,29 @@ class BetterModel(Model):
         hemisphere : basestring
         sigma_h, sigma_p : float, optional
             The values of the precipitation-driven Hall and Pedersen conductance.
-        additive_conductance : bool, optional, default True
-            If True, the Hall and Pedersen conductances specified by sigma_h and sigma_p are added
-            to the quiet-time conductances in the return flow (RF) region. If False, the quiet-time
-            conductances are replaced with the precipitation-driven conductances in the RF region.
+        precipitation_conductance : basestring, optional, default "add"
+            Can take one of three options, changing how the model reconciles the return flow region
+            between the precipitation-driven conductances and the quiet-time conductances.
+
+            add : Add the precipitation-driven conductances and quiet-time conductances.
+            max : Take the maximum of either precipitation-driven or quiet-time conductances
+                  (this is the original IDL behaviour).
+            replace : Replace the quiet-time with the precipitation-driven conductances.
         """
         Model.__init__(self, phi_d, phi_n, **kwargs)
 
         self.f_107 = f_107
         self.time = time
-        self.additive_conductance = additive_conductance
+
         if hemisphere not in {"north", "south"}:
-            raise ValueError("Hemisphere must be \"north\" or \"south\".")
+            raise ValueError("hemisphere must be \"north\" or \"south\".")
         else:
             self.hemisphere = hemisphere
+
+        if precipitation_conductance not in {"add", "max", "replace"}:
+            raise ValueError("precipitation_conductance must be \"add\", \"max\", or \"replace\".")
+        else:
+            self.precipitation_conductance = precipitation_conductance
 
         self.sza = self.sza_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
@@ -622,9 +631,17 @@ class BetterModel(Model):
         # Set the Pedersen and Hall conductivities in the return flow region.
         _, _, _, mask = self.labda_by_region()
 
-        if self.additive_conductance:
+        if self.precipitation_conductance == "add":
             sigma_h[mask, :] += rf_sigma_h
             sigma_p[mask, :] += rf_sigma_p
+        elif self.precipitation_conductance == "max":
+            mask_grid = np.broadcast_to(mask, (self._n_theta, self._n_labda)).T
+
+            mask_h = mask_grid & (sigma_h < rf_sigma_h)
+            sigma_h[mask_h] = rf_sigma_h
+
+            mask_p = mask_grid & (sigma_p < rf_sigma_p)
+            sigma_p[mask_p] = rf_sigma_p
         else:
             sigma_h[mask, :] = rf_sigma_h
             sigma_p[mask, :] = rf_sigma_p
