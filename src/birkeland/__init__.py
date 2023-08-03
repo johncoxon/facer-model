@@ -1,4 +1,3 @@
-import datetime as dt
 import numpy as np
 import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
@@ -545,13 +544,32 @@ class Model(object):
 
 
 class BetterModel(Model):
-    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7, **kwargs):
-        """Milan (2013) model expanded with the Moen and Brekke (1993) model"""
+    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
+                 additive_conductance=True, **kwargs):
+        """
+        Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time conductance.
+        kwargs are passed onto the underlying Model class.
+
+        Parameters
+        ----------
+        phi_d, phi_n : float
+            Dayside and nightside reconnection rates, in kV.
+        f_107 : float
+            The F10.7 index, in solar flux units.
+        time : datetime.datetime
+        hemisphere : basestring
+        sigma_h, sigma_p : float, optional
+            The values of the precipitation-driven Hall and Pedersen conductance.
+        additive_conductance : bool, optional, default True
+            If True, the Hall and Pedersen conductances specified by sigma_h and sigma_p are added
+            to the quiet-time conductances in the return flow (RF) region. If False, the quiet-time
+            conductances are replaced with the precipitation-driven conductances in the RF region.
+        """
         Model.__init__(self, phi_d, phi_n, **kwargs)
 
         self.f_107 = f_107
         self.time = time
-        self._ut_subtract = dt.timedelta(hours=17)
+        self.additive_conductance = additive_conductance
         if hemisphere not in {"north", "south"}:
             raise ValueError("Hemisphere must be \"north\" or \"south\".")
         else:
@@ -603,8 +621,13 @@ class BetterModel(Model):
 
         # Set the Pedersen and Hall conductivities in the return flow region.
         _, _, _, mask = self.labda_by_region()
-        sigma_h[mask, :] += rf_sigma_h
-        sigma_p[mask, :] += rf_sigma_p
+
+        if self.additive_conductance:
+            sigma_h[mask, :] += rf_sigma_h
+            sigma_p[mask, :] += rf_sigma_p
+        else:
+            sigma_h[mask, :] = rf_sigma_h
+            sigma_p[mask, :] = rf_sigma_p
 
         return sigma_h, sigma_p
 
