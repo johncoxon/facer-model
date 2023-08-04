@@ -1,10 +1,9 @@
-import datetime as dt
 import numpy as np
 import warnings
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
-class Model(object):
+class BaseModel(object):
     def __init__(self, phi_d, phi_n, f_pc=None, r1_colat=None, delta_colat=10,
                  theta_d=30, theta_n=30, sigma_pc=1, sigma_rf=1, order_n=20):
         """
@@ -375,68 +374,56 @@ class Model(object):
 
         return j
 
+    @staticmethod
+    def _coth(x):
+        """Used in Equations 28 and 30."""
+        return np.cosh(x) / np.sinh(x)
+
+    @staticmethod
+    def _csch(x):
+        """Used in Equations 29 and 31."""
+        return 1 / np.sinh(x)
+
     def draw_potential_contours(self, ax):
         """Draw contours of the electric potential as in Figure 2e-j."""
         phi_contours = np.concatenate((np.arange(-95, 0, 10), np.arange(5, 105, 10))) * 1e3
         ax.contour(self.theta, self.colat, self.phi, levels=phi_contours, colors="black")
 
-    def map_current(self, ax, vlim=100, cmap="RdBu_r", **kwargs):
+    def map_current(self, ax, vlim=100, cmap="RdBu_r", contours=True, **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.j * 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
-
+        mesh = self._plot_map(ax, self.j * 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
-    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", **kwargs):
+    def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the electric field in either component as in Figure 2e-h."""
         if component == "labda":
-            e_field = self.e_labda
-            y_label = r"$\mathregular{E_\lambda}$"
+            e_field = self.e_labda * 1e3
         elif component == "theta":
-            e_field = self.e_theta
-            y_label = r"$\mathregular{E_\theta}$"
+            e_field = self.e_theta * 1e3
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, e_field * 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        ax.set_ylabel(y_label, labelpad=20)
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
+        mesh = self._plot_map(ax, e_field, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
 
         return mesh
 
-    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", **kwargs):
+    def map_electric_potential(self, ax, vlim=30, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the electric potential."""
-        mesh = ax.pcolormesh(self.theta, self.colat, self.phi / 1e3, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
-
+        mesh = self._plot_map(ax, self.phi / 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
-    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", **kwargs):
+    def map_flow_vector(self, ax, component, vlim=750, cmap="PuOr_r", contours=True, **kwargs):
         """Plot a map of the ionospheric flow vector."""
         if component == "labda":
             flow_vector = self.v_labda
-            y_label = r"$\mathregular{V_\lambda}$"
         elif component == "theta":
             flow_vector = self.v_theta
-            y_label = r"$\mathregular{V_\theta}$"
         else:
             raise ValueError("Component must be \"theta\" or \"phi\".")
 
-        mesh = ax.pcolormesh(self.theta, self.colat, flow_vector, cmap=cmap,
-                             vmin=-vlim, vmax=vlim, shading="nearest", **kwargs)
-
-        ax.set_ylabel(y_label, labelpad=20)
-        self.draw_potential_contours(ax)
-        self._configure_polar_plot(ax, 30)
+        mesh = self._plot_map(ax, flow_vector, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
 
         return mesh
 
@@ -498,7 +485,18 @@ class Model(object):
         return cax
 
     @staticmethod
-    def _configure_polar_plot(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
+    def _annotate_map(ax, component):
+        if component == "labda":
+            annotation = r"$\mathregular{\lambda}$"
+        else:
+            annotation = r"$\mathregular{\theta}$"
+
+        ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
+                    xytext=(-5, -5), textcoords="offset points",
+                    fontsize="xx-large", ha="right", va="top")
+
+    @staticmethod
+    def _configure_map(ax, rmax, colat_grid_spacing=10, theta_range=None, mlt=True):
         """Configures a polar plot with midnight at the bottom and sensible labelling."""
 
         def format_mlt():
@@ -533,36 +531,67 @@ class Model(object):
 
         ax.grid(True)
 
-    @staticmethod
-    def _coth(x):
-        """Used in Equations 28 and 30."""
-        return np.cosh(x) / np.sinh(x)
+    def _plot_map(self, ax, variable, vmin, vmax, cmap, contours, **kwargs):
+        mesh = ax.pcolormesh(self.theta, self.colat, variable, cmap=cmap,
+                             vmin=vmin, vmax=vmax, shading="nearest", **kwargs)
 
-    @staticmethod
-    def _csch(x):
-        """Used in Equations 29 and 31."""
-        return 1 / np.sinh(x)
+        if contours:
+            self.draw_potential_contours(ax)
+        self._configure_map(ax, 30)
+
+        return mesh
 
 
-class BetterModel(Model):
-    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7, **kwargs):
-        """Milan (2013) model expanded with the Moen and Brekke (1993) model"""
-        Model.__init__(self, phi_d, phi_n, **kwargs)
+class Model(BaseModel):
+    def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
+                 precipitation_conductance="add", **kwargs):
+        """
+        The Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time
+        conductance as employed by Coxon et al. (2016).
+
+        kwargs are passed onto the underlying BaseModel class.
+
+        Parameters
+        ----------
+        phi_d, phi_n : float
+            Dayside and nightside reconnection rates, in kV.
+        f_107 : float
+            The F10.7 index, in solar flux units.
+        time : datetime.datetime
+        hemisphere : basestring
+        sigma_h, sigma_p : float, optional
+            The values of the precipitation-driven Hall and Pedersen conductance.
+        precipitation_conductance : basestring, optional, default "add"
+            Can take one of three options, changing how the model reconciles the return flow region
+            between the precipitation-driven conductances and the quiet-time conductances.
+
+            add : Add the precipitation-driven conductances and quiet-time conductances.
+            max : Take the maximum of either precipitation-driven or quiet-time conductances
+                  (this is the original IDL behaviour).
+            replace : Replace the quiet-time with the precipitation-driven conductances.
+        """
+        BaseModel.__init__(self, phi_d, phi_n, **kwargs)
 
         self.f_107 = f_107
         self.time = time
-        self._ut_subtract = dt.timedelta(hours=17)
+
         if hemisphere not in {"north", "south"}:
-            raise ValueError("Hemisphere must be \"north\" or \"south\".")
+            raise ValueError("hemisphere must be \"north\" or \"south\".")
         else:
             self.hemisphere = hemisphere
+
+        if precipitation_conductance not in {"add", "max", "replace"}:
+            raise ValueError("precipitation_conductance must be \"add\", \"max\", or \"replace\".")
+        else:
+            self.precipitation_conductance = precipitation_conductance
 
         self.sza = self.sza_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
         self.div_jp, self.div_jh = self.div_j_grid()
+        self.j = self.j_total()
 
     def sza_grid(self):
-        """The solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
+        """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
         labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
@@ -583,7 +612,7 @@ class BetterModel(Model):
         return z
 
     def sigma_q_grid(self):
-        """Quiet-time sigma_grid calculated from Moen and Brekke (1993)."""
+        """Grids of quiet-time Hall and Pedersen conductance (Moen and Brekke, 1993)."""
         sigma_h = np.zeros_like(self.sza)
         sigma_p = np.zeros_like(self.sza)
 
@@ -599,43 +628,115 @@ class BetterModel(Model):
         return sigma_h, sigma_p
 
     def sigma_grid(self, rf_sigma_h, rf_sigma_p):
+        """
+        Combine the quiet-time grid from Moen and Brekke (1993) with the user-specified Hall and
+        Pedersen return-flow-region conductivities.
+
+        Parameters
+        ----------
+        rf_sigma_h, rf_sigma_p : float
+            The values of the Hall and Pedersen conductivities in the return flow region.
+
+        Returns
+        -------
+        sigma_h, sigma_p : np.ndarray
+            Arrays of the Hall and Pedersen conductivity on the model grid.
+        """
         sigma_h, sigma_p = self.sigma_q_grid()
 
         # Set the Pedersen and Hall conductivities in the return flow region.
         _, _, _, mask = self.labda_by_region()
-        sigma_h[mask, :] += rf_sigma_h
-        sigma_p[mask, :] += rf_sigma_p
+
+        if self.precipitation_conductance == "add":
+            sigma_h[mask, :] += rf_sigma_h
+            sigma_p[mask, :] += rf_sigma_p
+        elif self.precipitation_conductance == "max":
+            mask_grid = np.broadcast_to(mask, (self._n_theta, self._n_labda)).T
+
+            mask_h = mask_grid & (sigma_h < rf_sigma_h)
+            sigma_h[mask_h] = rf_sigma_h
+
+            mask_p = mask_grid & (sigma_p < rf_sigma_p)
+            sigma_p[mask_p] = rf_sigma_p
+        else:
+            sigma_h[mask, :] = rf_sigma_h
+            sigma_p[mask, :] = rf_sigma_p
 
         return sigma_h, sigma_p
 
     def div_j_grid(self):
+        """Grids of the divergence of Hall and Pedersen current (calculated from E and sigma)."""
         div_jp = np.zeros_like(self.sigma_p)
         div_jh = np.zeros_like(self.sigma_h)
 
-        l_labda = (2 * np.pi * self._r_e / self._n_theta)
-        l_theta = np.expand_dims((2 * np.pi * self._r_e * np.sin(self.labda) / self._n_theta),
-                                 axis=1)
-
+        sin_colat = np.sin(np.radians(self.colat[:-1] + 0.5))
         j_plus_1 = np.concatenate((np.arange(359) + 1, [0]))
 
-        j_p_labda = l_theta[1:, :] * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
-                                      - self.e_labda[1:, :] * self.sigma_p[1:, :])
+        l_labda = (2 * np.pi * self._r_e / self._n_theta)
+        l_theta = np.expand_dims((2 * np.pi * self._r_e * sin_colat / self._n_theta), axis=1)
+
+        j_p_labda = l_theta * (self.e_labda[:-1, :] * self.sigma_p[:-1, :]
+                               - self.e_labda[1:, :] * self.sigma_p[1:, :])
         j_p_theta = -l_labda * (self.e_theta[1:, j_plus_1] * self.sigma_p[1:, j_plus_1]
                                 - self.e_theta[1:, :] * self.sigma_p[1:, :])
 
-        j_h_labda = l_theta[1:, :] * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
-                                      - self.e_theta[1:, :] * self.sigma_h[1:, :])
+        j_h_labda = l_theta * (self.e_theta[:-1, :] * self.sigma_h[:-1, :]
+                               - self.e_theta[1:, :] * self.sigma_h[1:, :])
         j_h_theta = l_labda * (self.e_labda[1:, j_plus_1] * self.sigma_h[1:, j_plus_1]
                                - self.e_labda[1:, :] * self.sigma_h[1:, :])
 
-        div_jp[:-1, :] += j_p_labda / 2
-        div_jp[1:, :] += j_p_labda / 2
-        div_jp[1:, :] += j_p_theta / 2
-        div_jp[1:, j_plus_1] += j_p_theta / 2
-
-        div_jh[:-1, :] += j_h_labda / 2
-        div_jh[1:, :] += j_h_labda / 2
-        div_jh[1:, :] += j_h_theta / 2
-        div_jh[1:, j_plus_1] += j_h_theta / 2
+        div_jp[1:, :] = j_p_labda + j_p_theta
+        div_jh[1:, :] = j_h_labda + j_h_theta
 
         return div_jp, div_jh
+
+    def j_total(self):
+        div_j_total = self.div_jp + self.div_jh
+        return np.sum(div_j_total[div_j_total > 0]) - np.sum(div_j_total[div_j_total < 0])
+
+    def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
+                               **kwargs):
+        """Plot a map of the solar zenith angle."""
+        mesh = self._plot_map(ax, np.degrees(self.sza), vmin, vmax, cmap, contours, **kwargs)
+        return mesh
+
+    def map_sigma(self, ax, component, vmin=0, vmax=10, cmap="viridis", contours=True, **kwargs):
+        if component.lower() == "hall":
+            sigma = self.sigma_h
+        elif component.lower() == "pedersen":
+            sigma = self.sigma_p
+        else:
+            raise ValueError("Component must be \"hall\" or \"pedersen\".")
+
+        mesh = self._plot_map(ax, sigma, vmin, vmax, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
+
+        return mesh
+
+    def map_div_j(self, ax, component, vlim=3, cmap="RdBu_r", contours=True, **kwargs):
+        if component.lower() == "hall":
+            div_j = self.div_jh / 1e3
+        elif component.lower() == "pedersen":
+            div_j = self.div_jp / 1e3
+        else:
+            raise ValueError("Component must be \"hall\" or \"pedersen\".")
+
+        mesh = self._plot_map(ax, div_j, -vlim, vlim, cmap, contours, **kwargs)
+        self._annotate_map(ax, component)
+
+        return mesh
+
+    @staticmethod
+    def _annotate_map(ax, component):
+        if component == "labda":
+            annotation = r"$\mathregular{\lambda}$"
+        elif component == "theta":
+            annotation = r"$\mathregular{\theta}$"
+        elif component.lower() == "hall":
+            annotation = "H"
+        else:
+            annotation = "P"
+
+        ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
+                    xytext=(-5, -5), textcoords="offset points",
+                    fontsize="xx-large", ha="right", va="top")
