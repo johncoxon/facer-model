@@ -691,8 +691,13 @@ class Model(BaseModel):
         return div_jp, div_jh
 
     def j_total(self):
-        div_j_total = self.div_jp + self.div_jh
-        return np.sum(div_j_total[div_j_total > 0]) - np.sum(div_j_total[div_j_total < 0])
+        return self.div_jp + self.div_jh
+
+    def map_current(self, ax, vlim=10, cmap="RdBu_r", contours=True, **kwargs):
+        """Plot a map of the Birkeland current as in Figure i-j."""
+        mesh = self._plot_map(ax, self.j / 1e3, -vlim, vlim, cmap, contours, **kwargs)
+
+        return mesh
 
     def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
                                **kwargs):
