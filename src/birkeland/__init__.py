@@ -596,7 +596,7 @@ class Model(BaseModel):
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
         doy = self.time.timetuple().tm_yday
-        ut = self.time.hour
+        ut = self.time.hour + (self.time.minute / 60.0)
 
         solstice = {"north": 172, "south": 356}
         noon = {"north": 17, "south": 5}
@@ -713,7 +713,7 @@ class Model(BaseModel):
 
         return mesh
 
-    def map_div_j(self, ax, component, vlim=3, cmap="RdBu_r", contours=True, **kwargs):
+    def map_div_j(self, ax, component, vlim=6, cmap="RdBu_r", contours=True, **kwargs):
         if component.lower() == "hall":
             div_j = self.div_jh / 1e3
         elif component.lower() == "pedersen":
