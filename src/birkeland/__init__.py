@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+from datetime import timedelta
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
@@ -596,7 +597,7 @@ class Model(BaseModel):
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
         doy = self.time.timetuple().tm_yday
-        ut = self.time.hour + (self.time.minute / 60.0)
+        ut = self.time.hour + (self.time.minute / 60.0) + (self.time.second / 3600.0)
 
         solstice = {"north": 172, "south": 356}
         noon = {"north": 17, "south": 5}
@@ -740,3 +741,33 @@ class Model(BaseModel):
         ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
                     xytext=(-5, -5), textcoords="offset points",
                     fontsize="xx-large", ha="right", va="top")
+
+
+class DailyAverage(object):
+    def __init__(self, phi_n, f_107, day, hemisphere, **kwargs):
+        """
+        The expanded Milan (2013) model calculated at both UT=5 and UT=17 for the input day and then averaged.
+        This simplification means that the dayside and nightside reconnection rates can be assumed to be approximately
+        equal and so only
+
+        The Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time
+        conductance as employed by Coxon et al. (2016).
+
+        kwargs are passed onto the underlying BaseModel class.
+
+        Parameters
+        ----------
+        phi_n : float
+            Reconnection rates, in kV.
+        f_107 : float
+            The F10.7 index, in solar flux units.
+        day : datetime.datetime
+        hemisphere : basestring
+        """
+        if day.hour != 0 or day.minute != 0 or day.second != 0 or day.microsecond != 0:
+            raise ValueError("The day must not have any associated time information.")
+
+        self.ut_5 = Model(phi_n, phi_n, f_107, day + timedelta(hours=5), hemisphere, **kwargs)
+        self.ut_17 = Model(phi_n, phi_n, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
+
+        self.j = np.mean(self.ut_5.j, self.ut_17.j)
