@@ -31,6 +31,11 @@ class BaseModel(object):
         order_n : int, optional, default 20
             Set this to govern the order of the Fourier terms in the model.
         """
+        for arg in (phi_d, phi_n, f_pc, r1_colat, delta_colat, theta_d, theta_n, sigma_pc, sigma_rf, order_n):
+            if arg:
+                if np.isnan(arg):
+                    raise ValueError("NaN detected in input.")
+
         self.phi_d = phi_d * 1e3
         self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
         self.theta_d = np.radians(theta_d)
@@ -572,6 +577,11 @@ class Model(BaseModel):
             replace : Replace the quiet-time with the precipitation-driven conductances.
         """
         BaseModel.__init__(self, phi_d, phi_n, **kwargs)
+
+        for arg in (f_107, sigma_h, sigma_p):
+            if arg:
+                if np.isnan(arg):
+                    raise ValueError("NaN detected in input.")
 
         self.f_107 = f_107
         self.time = time
