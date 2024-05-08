@@ -380,6 +380,9 @@ class BaseModel(object):
 
         return j
 
+    def j_total(self):
+        return np.sum(self.j[self.j > 0]) - np.sum(self.j[self.j < 0])
+
     @staticmethod
     def _coth(x):
         """Used in Equations 28 and 30."""
@@ -397,7 +400,7 @@ class BaseModel(object):
 
     def map_current(self, ax, vlim=100, cmap="RdBu_r", contours=True, **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = self._plot_map(ax, self.j * 1e3, -vlim, vlim, cmap, contours, **kwargs)
+        mesh = self._plot_map(ax, self.j_grid() * 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
     def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", contours=True, **kwargs):
@@ -599,7 +602,7 @@ class Model(BaseModel):
         self.sza = self.sza_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
         self.div_jp, self.div_jh = self.div_j_grid()
-        self.j = self.j_total()
+        self.j = self.div_jp + self.div_jh
 
     def sza_grid(self):
         """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
@@ -701,10 +704,6 @@ class Model(BaseModel):
 
         return div_jp, div_jh
 
-    def j_total(self):
-        div_j_total = self.div_jp + self.div_jh
-        return np.sum(div_j_total[div_j_total > 0]) - np.sum(div_j_total[div_j_total < 0])
-
     def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
                                **kwargs):
         """Plot a map of the solar zenith angle."""
@@ -775,4 +774,4 @@ class DailyAverage(object):
         self.ut_5 = Model(phi_d, phi_d, f_107, day + timedelta(hours=5), hemisphere, **kwargs)
         self.ut_17 = Model(phi_d, phi_d, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
 
-        self.j = np.mean((self.ut_5.j, self.ut_17.j))
+        self.j = np.mean((self.ut_5.j_total(), self.ut_17.j_total()))
