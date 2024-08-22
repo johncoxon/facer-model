@@ -774,4 +774,4 @@ class DailyAverage(object):
         self.ut_5 = Model(phi_d, phi_d, f_107, day + timedelta(hours=5), hemisphere, **kwargs)
         self.ut_17 = Model(phi_d, phi_d, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
 
-        self.j = np.mean((self.ut_5.j_total(), self.ut_17.j_total()))
+        self.j = np.median((self.ut_5.j_total(), self.ut_17.j_total()))
