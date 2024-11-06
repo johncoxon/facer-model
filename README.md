@@ -8,6 +8,12 @@ A Python implementation of the Birkeland current model presented the following t
 
 A simple mathematical model of the region 1 and 2 Birkeland current system intensities for differing dayside and nightside magnetic reconnection rates, consistent with the expanding/contracting polar cap paradigm of solar wind-magnetosphere-ionosphere coupling.
 
+## Tests
+
+```
+pytest tests/test.py
+```
+
 ## Usage
 
 ```

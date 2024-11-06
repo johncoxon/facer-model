@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+from datetime import timedelta
 from matplotlib.ticker import FuncFormatter, MultipleLocator
 
 
@@ -30,6 +31,11 @@ class BaseModel(object):
         order_n : int, optional, default 20
             Set this to govern the order of the Fourier terms in the model.
         """
+        for arg in (phi_d, phi_n, f_pc, r1_colat, delta_colat, theta_d, theta_n, sigma_pc, sigma_rf, order_n):
+            if arg:
+                if np.isnan(arg):
+                    raise ValueError("NaN detected in input.")
+
         self.phi_d = phi_d * 1e3
         self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
         self.theta_d = np.radians(theta_d)
@@ -374,6 +380,9 @@ class BaseModel(object):
 
         return j
 
+    def j_total(self):
+        return np.sum(self.j[self.j > 0]) - np.sum(self.j[self.j < 0])
+
     @staticmethod
     def _coth(x):
         """Used in Equations 28 and 30."""
@@ -391,7 +400,7 @@ class BaseModel(object):
 
     def map_current(self, ax, vlim=100, cmap="RdBu_r", contours=True, **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = self._plot_map(ax, self.j * 1e3, -vlim, vlim, cmap, contours, **kwargs)
+        mesh = self._plot_map(ax, self.j_grid() * 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
     def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", contours=True, **kwargs):
@@ -572,6 +581,11 @@ class Model(BaseModel):
         """
         BaseModel.__init__(self, phi_d, phi_n, **kwargs)
 
+        for arg in (f_107, sigma_h, sigma_p):
+            if arg:
+                if np.isnan(arg):
+                    raise ValueError("NaN detected in input.")
+
         self.f_107 = f_107
         self.time = time
 
@@ -588,7 +602,7 @@ class Model(BaseModel):
         self.sza = self.sza_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
         self.div_jp, self.div_jh = self.div_j_grid()
-        self.j = self.j_total()
+        self.j = self.div_jp + self.div_jh
 
     def sza_grid(self):
         """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
@@ -596,7 +610,7 @@ class Model(BaseModel):
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
 
         doy = self.time.timetuple().tm_yday
-        ut = self.time.hour
+        ut = self.time.hour + (self.time.minute / 60.0) + (self.time.second / 3600.0)
 
         solstice = {"north": 172, "south": 356}
         noon = {"north": 17, "south": 5}
@@ -690,10 +704,6 @@ class Model(BaseModel):
 
         return div_jp, div_jh
 
-    def j_total(self):
-        div_j_total = self.div_jp + self.div_jh
-        return np.sum(div_j_total[div_j_total > 0]) - np.sum(div_j_total[div_j_total < 0])
-
     def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
                                **kwargs):
         """Plot a map of the solar zenith angle."""
@@ -713,7 +723,7 @@ class Model(BaseModel):
 
         return mesh
 
-    def map_div_j(self, ax, component, vlim=3, cmap="RdBu_r", contours=True, **kwargs):
+    def map_div_j(self, ax, component, vlim=6, cmap="RdBu_r", contours=True, **kwargs):
         if component.lower() == "hall":
             div_j = self.div_jh / 1e3
         elif component.lower() == "pedersen":
@@ -740,3 +750,28 @@ class Model(BaseModel):
         ax.annotate(annotation, xy=(1, 1), xycoords="axes fraction",
                     xytext=(-5, -5), textcoords="offset points",
                     fontsize="xx-large", ha="right", va="top")
+
+
+class DailyAverage(object):
+    def __init__(self, phi_d, f_107, day, hemisphere, **kwargs):
+        """
+        The expanded Milan (2013) model calculated at both UT=5 and UT=17 for the input day and then averaged.
+        This simplification means that the dayside and nightside reconnection rates can be assumed to be approximately
+        equal and so only the dayside reconnection rate need be provided.
+
+        Parameters
+        ----------
+        phi_d : float
+            Reconnection rates, in kV.
+        f_107 : float
+            The F10.7 index, in solar flux units.
+        day : datetime.datetime
+        hemisphere : basestring
+        """
+        if day.hour != 0 or day.minute != 0 or day.second != 0 or day.microsecond != 0:
+            raise ValueError("The day must not have any associated time information.")
+
+        self.ut_5 = Model(phi_d, phi_d, f_107, day + timedelta(hours=5), hemisphere, **kwargs)
+        self.ut_17 = Model(phi_d, phi_d, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
+
+        self.j = np.median((self.ut_5.j_total(), self.ut_17.j_total()))
