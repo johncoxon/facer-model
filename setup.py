@@ -15,7 +15,8 @@ setuptools.setup(author="John Coxon and Steve Milan",
                              "presented by Milan (2013) and Coxon et al. (2016).",
                  install_requires=[
                      "numpy",
-                     "pandas"
+                     "pandas",
+                     "matplotlib",
                  ],
                  long_description=long_description,
                  long_description_content_type="text/markdown",
