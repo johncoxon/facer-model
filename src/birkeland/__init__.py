@@ -397,7 +397,7 @@ class BaseModel(object):
 
     def map_current(self, ax, vlim=100, cmap="RdBu_r", contours=True, **kwargs):
         """Plot a map of the Birkeland current as in Figure i-j."""
-        mesh = self._plot_map(ax, self.j * 1e3, -vlim, vlim, cmap, contours, **kwargs)
+        mesh = self._plot_map(ax, self.j_grid() * 1e3, -vlim, vlim, cmap, contours, **kwargs)
         return mesh
 
     def map_electric_field(self, ax, component, vlim=50, cmap="PuOr_r", contours=True, **kwargs):
