@@ -41,7 +41,7 @@ def create_test_set(examples, model_type="model"):
         grids = ("sza", "sigma_h", "sigma_p", "div_jh", "div_jp")
 
     for grid in grids:
-        dictionary[f"{grid}_mean"] = np.array([np.mean(np.abs(getattr(e, grid)))
+        dictionary[f"{grid}_median"] = np.array([np.median(np.abs(getattr(e, grid)))
                                                for e in examples])
         dictionary[f"{grid}_sum"] = np.array([np.sum(np.abs(getattr(e, grid)))
                                               for e in examples])
