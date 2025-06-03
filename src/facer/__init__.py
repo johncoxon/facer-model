@@ -555,8 +555,10 @@ class Model(BaseModel):
     def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
                  precipitation_conductance="add", **kwargs):
         """
-        The Milan (2013) model expanded with the Moen and Brekke (1993) model of quiet-time
-        conductance as employed by Coxon et al. (2016).
+        A Python implementation of the Birkeland current model presented by Coxon et al. (2016).
+
+        An expansion of the Milan (2013) model expanded with more realistic conductances based on the
+        Moen and Brekke (1993) model of quiet-time conductance.
 
         kwargs are passed onto the underlying BaseModel class.
 
@@ -755,9 +757,9 @@ class Model(BaseModel):
 class DailyAverage(object):
     def __init__(self, phi_d, f_107, day, hemisphere, **kwargs):
         """
-        The expanded Milan (2013) model calculated at both UT=5 and UT=17 for the input day and then averaged.
-        This simplification means that the dayside and nightside reconnection rates can be assumed to be approximately
-        equal and so only the dayside reconnection rate need be provided.
+        The FACER model calculated at both UT=5 and UT=17 for the input day and then averaged. Over a timescale of one
+        day the dayside and nightside reconnection rates can be assumed to be approximately equal (Cowley and Lockwood,
+        1992) and so only the dayside reconnection rate need be provided.
 
         Parameters
         ----------

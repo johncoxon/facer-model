@@ -1,7 +1,7 @@
 # Create a csv file which can be used for unit testing the BaseModel class.
 import numpy as np
-from birkeland import BaseModel, Model
 from datetime import datetime
+from facer import BaseModel, Model
 from pandas import DataFrame
 from pathlib import Path
 
