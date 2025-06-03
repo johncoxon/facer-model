@@ -12,10 +12,11 @@ setuptools.setup(author="John Coxon and Steve Milan",
                     "Programming Language :: Python :: 3",
                  ],
                  description="A Python implementation of the Birkeland current model "
-                             "presented by Milan (2013).",
+                             "presented by Milan (2013) and Coxon et al. (2016).",
                  install_requires=[
                      "numpy",
-                     "pandas"
+                     "pandas",
+                     "matplotlib",
                  ],
                  long_description=long_description,
                  long_description_content_type="text/markdown",
@@ -23,6 +24,6 @@ setuptools.setup(author="John Coxon and Steve Milan",
                  package_dir={"": "src"},
                  packages=setuptools.find_packages(where="src"),
                  python_requires=">=3.9",
-                 url="https://github.com/johncoxon/birkeland",
+                 url="https://github.com/johncoxon/birkeland-model",
                  version="1.0",
                  )
