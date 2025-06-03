@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
-from birkeland import BaseModel, Model
 from datetime import datetime
+from facer import BaseModel, Model
 from pandas import read_csv
 from pathlib import Path
 
