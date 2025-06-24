@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "facer-model"
-version = "1.0.3"
+version = "1.0.3.1"
 dependencies = [
     "matplotlib",
     "numpy",
@@ -18,7 +18,7 @@ authors = [
 maintainers = [
     {name = "John C Coxon", email = "work@johncoxon.co.uk"}
 ]
-description = "The Birkeland current model presented by Coxon et al. (2016)."
+description = "The Birkeland current model presented by Coxon et al. (2016), based on Milan (2013)."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENCE.txt"]
