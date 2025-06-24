@@ -1,5 +1,5 @@
 # The Field-Aligned Currents Estimated from Reconnection (FACER) model.
-# Copyright (C) 2025 John Coxon (john@johncoxon.co.uk)
+# Copyright (C) 2025 John Coxon (work@johncoxon.co.uk)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published

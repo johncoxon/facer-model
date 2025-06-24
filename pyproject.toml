@@ -12,8 +12,11 @@ dependencies = [
 ]
 requires-python = ">=3.9"
 authors = [
-    {name = "John C Coxon", email = "john@johncoxon.co.uk"},
+    {name = "John C Coxon", email = "work@johncoxon.co.uk"},
     {name = "Stephen E Milan", email = "steve.milan@leicester.ac.uk"}
+]
+maintainers = [
+    {name = "John C Coxon", email = "work@johncoxon.co.uk"}
 ]
 description = "The Birkeland current model presented by Coxon et al. (2016)."
 readme = "README.md"

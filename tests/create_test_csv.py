@@ -1,5 +1,5 @@
 # Create a csv file which can be used for unit testing the BaseModel class.
-# Copyright (C) 2025 John Coxon (john@johncoxon.co.uk)
+# Copyright (C) 2025 John Coxon (work@johncoxon.co.uk)
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as published
