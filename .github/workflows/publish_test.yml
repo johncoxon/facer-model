@@ -1,8 +1,9 @@
-name: Publish to PyPI and TestPyPI when a release is created.
+name: Publish to TestPyPI when changes are pushed to main.
 
 on:
-  release:
-    types: [created]
+  push:
+    branches:
+      main
 
 jobs:
   build:
@@ -30,25 +31,6 @@ jobs:
         with:
           name: python-package-distributions
           path: dist/
-
-  publish-to-pypi:
-    name: Publish to PyPI
-    needs:
-      - build
-    runs-on: ubuntu-latest
-    environment:
-      name: pypi
-      url: https://pypi.org/p/facer-model
-    permissions:
-      id-token: write
-    steps:
-      - name: Download all the distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-      - name: Publish distribution to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-to-testpypi:
     name: Publish to TestPyPI
