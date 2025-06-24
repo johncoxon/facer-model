@@ -1,5 +1,6 @@
 # FACER
 
+[![DOI](https://zenodo.org/badge/665918230.svg)](https://doi.org/10.5281/zenodo.15731338)
 [![Python package](https://github.com/johncoxon/birkeland-model/actions/workflows/test.yml/badge.svg)](https://github.com/johncoxon/birkeland-model/actions/workflows/test.yml)
 
 Field-Aligned Currents Estimated from Reconnection (FACER) is a Python implementation of the Birkeland current model presented in the following two papers:

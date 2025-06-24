@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "facer-model"
-version = "1.0.2"
+version = "1.0.3"
 dependencies = [
     "matplotlib",
     "numpy",
@@ -35,4 +35,5 @@ classifiers = ["Development Status :: 4 - Beta",
 ]
 
 [project.urls]
+DOI = "https://doi.org/10.5281/zenodo.15731338"
 Repository = "https://github.com/johncoxon/facer-model"
