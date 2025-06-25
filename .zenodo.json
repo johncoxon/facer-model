@@ -1,0 +1,53 @@
+{
+    "creators": [
+        {
+            "name": "Coxon, John C",
+            "orcid": "0000-0002-0166-6854",
+            "affiliation": "Northumbria University"
+        },
+        {
+            "name": "Milan, Stephen E",
+            "orcid": "0000-0001-5050-9604",
+            "affiliation": "University of Leicester"
+        },
+        {
+            "name": "Townson, Matthew J",
+            "orcid": "0000-0002-8902-0379",
+            "affiliation": "Northumbria University"
+        },
+
+    ],
+    "title": "FACER model",
+    "description": "The Birkeland current model presented by Coxon et al. (2016), based on Milan (2013).",
+    "version": "1.0.5",
+    "access_right": "open",
+    "related_identifiers": [
+        {
+            "identifier": "https://github.com/johncoxon/facer-model",
+            "relation": "isSupplementTo",
+            "resource_type": "software"
+        },
+        {
+            "identifier": "https://doi.org/10.1002/jgra.50393",
+            "relation": "isDescribedBy",
+            "resource_type": "publication-article"
+        },
+        {
+            "identifier": "https://doi.org/10.1002/2015JA022050",
+            "relation": "isDescribedBy",
+            "resource_type": "publication-article"
+        }
+    ],
+    "grants": [
+        {"id": "10.13039/100014013::ST/V004883/1"}
+    ],
+    
+    "keywords": [
+        "birkeland currents",
+        "field-aligned currents",
+        "magnetic reconnection"
+    ],
+    "license": "AGPL-3.0-or-later",
+    "upload_type": "software",
+    "language": "eng"
+}
