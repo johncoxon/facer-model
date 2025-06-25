@@ -16,7 +16,8 @@ authors = [
     {name = "Stephen E Milan", email = "steve.milan@leicester.ac.uk"}
 ]
 maintainers = [
-    {name = "John C Coxon", email = "work@johncoxon.co.uk"}
+    {name = "John C Coxon", email = "work@johncoxon.co.uk"},
+    {name = "Matthew J Townson", email = "matthew.townson@northumbria.ac.uk"}
 ]
 description = "The Birkeland current model presented by Coxon et al. (2016), based on Milan (2013)."
 readme = "README.md"
@@ -35,5 +36,5 @@ classifiers = ["Development Status :: 4 - Beta",
 ]
 
 [project.urls]
-DOI = "https://doi.org/10.5281/zenodo.15731338"
-Repository = "https://github.com/johncoxon/facer-model"
+doi = "https://doi.org/10.5281/zenodo.15731338"
+repository = "https://github.com/johncoxon/facer-model"
