@@ -28,7 +28,7 @@ pytest tests/test.py
 
 ## Usage
 
-A very basic instantiation of the model can be seen below. For more examples, check out the notebooks in the repository.
+A very basic instantiation of the model can be seen below. For more examples, check out the notebooks in the repository, which explicitly detail how to use the model to replicate the results from the two papers which define the model.
 ```
 from facer import Model
 
