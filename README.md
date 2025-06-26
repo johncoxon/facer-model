@@ -2,7 +2,7 @@
 
 [![PyPI badge](https://badge.fury.io/py/facer-model.svg)](https://badge.fury.io/py/facer-model)
 [![Zenodo badge](https://zenodo.org/badge/665918230.svg)](https://doi.org/10.5281/zenodo.15731338)
-[![Tests badge](https://github.com/johncoxon/birkeland-model/actions/workflows/test.yml/badge.svg)](https://github.com/johncoxon/birkeland-model/actions/workflows/test.yml)
+[![Tests badge](https://github.com/johncoxon/birkeland-model/actions/workflows/tests.yaml/badge.svg)](https://github.com/johncoxon/birkeland-model/actions/workflows/tests.yaml)
 
 Field-Aligned Currents Estimated from Reconnection (FACER) is a Python implementation of the Birkeland current model presented by Coxon et al. (2016), based on Milan (2013). It is a simple mathematical model of the region 1 and 2 Birkeland current system intensities for differing dayside and nightside magnetic reconnection rates, consistent with the expanding/contracting polar cap paradigm of solar wind-magnetosphere-ionosphere coupling.
 
