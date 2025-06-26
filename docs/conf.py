@@ -1,6 +1,6 @@
 """Configuration file for documentation."""
 import os
-from pyproject_parser import PyProject
+from sphinx_pyproject import SphinxConfig
 
 extensions = ["sphinx.ext.autodoc",
               "sphinx.ext.autosummary",
@@ -12,9 +12,6 @@ extensions = ["sphinx.ext.autodoc",
               "numpydoc"
 ]
 
-# General information about the project.
-info = PyProject.load("../pyproject.toml")
-
 # Set the basic variables
 source_suffix = ".rst"
 master_doc = "index"
@@ -22,7 +19,7 @@ project = "facer-model"
 year = "2025"
 author = "John C Coxon et al."
 copyright = f"{year}, {author}"
-version = release = info.project["version"].base_version
+version = release = SphinxConfig("../pyproject.toml").version
 
 pygments_style = "trac"
 templates_path = ["."]
