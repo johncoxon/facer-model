@@ -53,21 +53,21 @@
     "subjects": [
         {
             "term": "Earth (planet)",
-            "identifier": "http://vocabularies.unesco.org/thesaurus/concept4083",
+            "identifier": "https://vocabularies.unesco.org/thesaurus/concept4083",
             "scheme": "url"
         },
         {
             "term": "Geophysics",
-            "identifier": "http://vocabularies.unesco.org/thesaurus/concept160",
+            "identifier": "https://vocabularies.unesco.org/thesaurus/concept160",
             "scheme": "url"
         },
         {
             "term": "Space sciences",
-            "identifier": "http://vocabularies.unesco.org/thesaurus/mt2.30",
+            "identifier": "https://vocabularies.unesco.org/thesaurus/mt2.30",
             "scheme": "url"
         }
     ],
-    "title": "FACER model",
+    "title": "facer-model",
     "upload_type": "software",
-    "version": "1.0.6"
+    "version": "1.0.7"
 }
