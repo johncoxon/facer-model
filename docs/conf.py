@@ -8,7 +8,8 @@ extensions = ["sphinx.ext.autodoc",
               "sphinx.ext.coverage",
               "sphinx.ext.ifconfig",
               "sphinx.ext.viewcode",
-              "sphinx.ext.napoleon"
+              "sphinx.ext.napoleon",
+              "numpydoc"
 ]
 
 # General information about the project.
