@@ -1,4 +1,5 @@
 {
+    "access_right": "open",
     "creators": [
         {
             "name": "Coxon, John C",
@@ -14,40 +15,64 @@
             "name": "Townson, Matthew J",
             "orcid": "0000-0002-8902-0379",
             "affiliation": "Northumbria University"
-        },
-
+        }
     ],
-    "title": "FACER model",
     "description": "The Birkeland current model presented by Coxon et al. (2016), based on Milan (2013).",
-    "version": "1.0.5",
-    "access_right": "open",
+    "grants": [
+        {
+            "id": "10.13039/100014013::ST/V004883/1"
+        }
+    ],
+    "keywords": [
+        "Birkeland currents",
+        "Field-aligned currents",
+        "Magnetic reconnection"
+    ],
+    "language": "eng",
+    "license": "AGPL-3.0-or-later",
     "related_identifiers": [
         {
             "identifier": "https://github.com/johncoxon/facer-model",
             "relation": "isSupplementTo",
-            "resource_type": "software"
+            "resource_type": "software",
+            "scheme": "url"
         },
         {
-            "identifier": "https://doi.org/10.1002/jgra.50393",
+            "identifier": "10.1002/jgra.50393",
             "relation": "isDescribedBy",
-            "resource_type": "publication-article"
+            "resource_type": "publication-article",
+            "scheme": "doi"
         },
         {
-            "identifier": "https://doi.org/10.1002/2015JA022050",
+            "identifier": "10.1002/2015JA022050",
             "relation": "isDescribedBy",
-            "resource_type": "publication-article"
+            "resource_type": "publication-article",
+            "scheme": "doi"
         }
     ],
-    "grants": [
-        {"id": "10.13039/100014013::ST/V004883/1"}
+    "subjects": [
+        {
+            "term": "Earth (planet)",
+            "identifier": "http://vocabularies.unesco.org/thesaurus/concept4083",
+            "scheme": "url"
+        },
+        {
+            "term": "Geophysics",
+            "identifier": "https://www.eionet.europa.eu/gemet/en/concept/3655",
+            "scheme": "url"
+        },
+        {
+            "term": "Space research",
+            "identifier": "https://www.eionet.europa.eu/gemet/en/concept/14983",
+            "scheme": "url"
+        },
+        {
+            "term": "Space sciences",
+            "identifier": "http://vocabularies.unesco.org/thesaurus/mt2.30",
+            "scheme": "url"
+        }
     ],
-    
-    "keywords": [
-        "birkeland currents",
-        "field-aligned currents",
-        "magnetic reconnection"
-    ],
-    "license": "AGPL-3.0-or-later",
+    "title": "FACER model",
     "upload_type": "software",
-    "language": "eng"
+    "version": "1.0.5"
 }
