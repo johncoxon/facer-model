@@ -58,7 +58,7 @@
         },
         {
             "term": "Geophysics",
-            "identifier": "https://www.eionet.europa.eu/gemet/en/concept/3655",
+            "identifier": "http://vocabularies.unesco.org/thesaurus/concept160",
             "scheme": "url"
         },
         {
@@ -74,5 +74,5 @@
     ],
     "title": "FACER model",
     "upload_type": "software",
-    "version": "1.0.5"
+    "version": "1.0.6"
 }
