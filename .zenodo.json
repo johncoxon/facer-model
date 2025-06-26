@@ -62,11 +62,6 @@
             "scheme": "url"
         },
         {
-            "term": "Space research",
-            "identifier": "https://www.eionet.europa.eu/gemet/en/concept/14983",
-            "scheme": "url"
-        },
-        {
             "term": "Space sciences",
             "identifier": "http://vocabularies.unesco.org/thesaurus/mt2.30",
             "scheme": "url"
