@@ -62,11 +62,6 @@
             "scheme": "url"
         },
         {
-            "term": "Geophysics",
-            "identifier": "http://vocabularies.unesco.org/thesaurus/concept160",
-            "scheme": "url"
-        },
-        {
             "term": "Space research",
             "identifier": "https://www.eionet.europa.eu/gemet/en/concept/14983",
             "scheme": "url"
