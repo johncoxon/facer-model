@@ -1,4 +1,4 @@
-name: Publish to TestPyPI when changes are pushed to main.
+name: Publish to TestPyPI
 
 on:
   push:
