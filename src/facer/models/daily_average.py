@@ -40,8 +40,8 @@ class DailyAverage(object):
         self.ut = {}
         j_totals = []
 
-        for hour in np.arange(24, dtype=int):
-            self.ut[hour] = Model(phi_d, phi_d, f_107, day + timedelta(hours=hour), hemisphere, **kwargs)
+        for hour in np.arange(24):
+            self.ut[hour] = Model(phi_d, phi_d, f_107, day + timedelta(hours=int(hour)), hemisphere, **kwargs)
             j_totals.append(self.ut[hour].j_total())
 
         self.j = np.mean(j_totals)

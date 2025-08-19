@@ -118,7 +118,7 @@ class Model(BaseModel):
         # Or follow Laundal et al. (2022). Equation numbers are from that paper.
         else:
             # Read in the maximum plasma production values.
-            parent_directory = Path(__file__).parent.resolve()
+            parent_directory = Path(__file__).parent.parent.resolve()
             production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
 
             # Equation 26 is only calculated for solar zenith angles between 0–120°. We can assume any solar zenith
