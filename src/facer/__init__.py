@@ -650,9 +650,6 @@ class Model(BaseModel):
         Grids of quiet-time Hall and Pedersen conductance, using the modified version of Moen and Brekke (1993)
         presented by Laundal et al. (2022). Numerical solutions to their Equation 26 are taken from Lompe.
         """
-        sigma_h = np.zeros_like(self.sza)
-        sigma_p = np.zeros_like(self.sza)
-
         # Read in the maximum plasma production values.
         parent_directory = Path(__file__).parent.resolve()
         production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
@@ -804,10 +801,14 @@ class DailyAverage(object):
         if day.hour != 0 or day.minute != 0 or day.second != 0 or day.microsecond != 0:
             raise ValueError("The day must not have any associated time information.")
 
-        self.ut_5 = Model(phi_d, phi_d, f_107, day + timedelta(hours=5), hemisphere, **kwargs)
-        self.ut_17 = Model(phi_d, phi_d, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
+        self.ut = {}
+        j_totals = []
 
-        self.j = np.median((self.ut_5.j_total(), self.ut_17.j_total()))
+        for hour in np.arange(24):
+            self.ut[hour] = Model(phi_d, phi_d, f_107, day + timedelta(hours=hour), hemisphere, **kwargs)
+            j_totals.append(self.ut[hour].j_total())
+
+        self.j = np.mean(j_totals)
 
 
 def save_maximum_plasma_production_values(lompe_data, target_path):
