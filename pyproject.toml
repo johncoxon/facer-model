@@ -39,8 +39,5 @@ classifiers = ["Development Status :: 4 - Beta",
 doi = "https://doi.org/10.5281/zenodo.15731338"
 repository = "https://github.com/johncoxon/facer-model"
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
 [tool.setuptools.package-data]
 facer = ["data/*.csv"]
