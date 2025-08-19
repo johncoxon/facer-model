@@ -571,7 +571,7 @@ class BaseModel(object):
 
 class Model(BaseModel):
     def __init__(self, phi_d, phi_n, f_107, time, hemisphere, sigma_h=12, sigma_p=7,
-                 precipitation_conductance="add", **kwargs):
+                 precipitation_conductance="add", flat_earth=False, **kwargs):
         """
         A Python implementation of the Birkeland current model presented by Coxon et al. (2016).
 
@@ -598,6 +598,10 @@ class Model(BaseModel):
             max : Take the maximum of either precipitation-driven or quiet-time conductances
                   (this is the original IDL behaviour).
             replace : Replace the quiet-time with the precipitation-driven conductances.
+        flat_earth : bool, optional, default False
+            If False, quiet-time conductance modelling uses the modified version of Moen and Brekke (1993) presented by
+                Laundal et al. (2022), which modifies the assumption Moen and Brekke (1993) employ of a flat Earth.
+            If True, quiet-time conductance modelling uses Moen and Brekke (1993) directly.
         """
         BaseModel.__init__(self, phi_d, phi_n, **kwargs)
 
@@ -618,13 +622,14 @@ class Model(BaseModel):
             raise ValueError("precipitation_conductance must be \"add\", \"max\", or \"replace\".")
         else:
             self.precipitation_conductance = precipitation_conductance
-
-        self.sza = self.sza_grid()
+        
+        self.flat_earth = flat_earth
+        self.chi = self.chi_grid()
         self.sigma_h, self.sigma_p = self.sigma_grid(sigma_h, sigma_p)
         self.div_jp, self.div_jh = self.div_j_grid()
         self.j = self.div_jp + self.div_jh
 
-    def sza_grid(self):
+    def chi_grid(self):
         """Grid of solar zenith angle from Ecological Climatology (Bonan, 2015, p. 61)."""
         labda_grid = np.broadcast_to(self.labda, (self._n_theta, self._n_labda)).T
         theta_grid = np.broadcast_to(self.theta, (self._n_labda, self._n_theta))
@@ -645,31 +650,44 @@ class Model(BaseModel):
 
         return z
 
+
     def sigma_q_grid(self):
         """
-        Grids of quiet-time Hall and Pedersen conductance, using the modified version of Moen and Brekke (1993)
-        presented by Laundal et al. (2022). Numerical solutions to their Equation 26 are taken from Lompe.
+        Grids of quiet-time Hall and Pedersen conductance, using either Moen and Brekke (1993) or the modified version
+        of their method presented by Laundal et al. (2022) depending on the value of self.flat_earth.
         """
-        # Read in the maximum plasma production values.
-        parent_directory = Path(__file__).parent.resolve()
-        production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
+        # Follow Moen and Brekke (1993). Equation numbers are from that paper.
+        if self.flat_earth:
+            # Equation 6 is only real for solar zenith angles less than 90°, so correct any angles greater than that.
+            invalid_mask = self.chi > np.radians(90)
+            valid_chi = self.chi.copy()
+            valid_chi[invalid_mask] = np.radians(90)
 
-        # Laundal et al. (2022)'s Equation 26 is only calculated for solar zenith angles between 0–120°.
-        # We can assume any solar zenith angle greater than 120° has a plasma production of zero given
-        # that q' is flat for zenith angles greater than ~113°, so we just set them all to 120°.
-        invalid_mask = self.sza >= np.radians(120)
-        valid_sza = self.sza.copy()
-        valid_sza[invalid_mask] = np.radians(120)
+            chi_function = np.cos(valid_chi)  # This is the chi function for Moen and Brekke (1993)'s Equation 6.
 
-        # Get the values of q' for the given solar zenith angles.
-        indices = np.searchsorted(np.radians(production.chi), valid_sza)
-        q_dash = np.take(production.q_dash.values, indices)
+        # Or follow Laundal et al. (2022). Equation numbers are from that paper.
+        else:
+            # Read in the maximum plasma production values.
+            parent_directory = Path(__file__).parent.resolve()
+            production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
 
-        # Calculate the ionospheric conductances from Equation 27 and 28 of Laundal et al. (2022).
-        sigma_h = (self.f_107 ** 0.53) * ((0.81 * q_dash) + (0.54 * np.sqrt(q_dash)))
-        sigma_p = (self.f_107 ** 0.49) * ((0.34 * q_dash) + (0.93 * np.sqrt(q_dash)))
+            # Equation 26 is only calculated for solar zenith angles between 0–120°. We can assume any solar zenith
+            # angle greater than 120° has a production of zero given that q' is flat for angles greater than ~113°.
+            invalid_mask = self.chi > np.radians(120)
+            valid_chi = self.chi.copy()
+            valid_chi[invalid_mask] = np.radians(120)
+
+            # Get the values of q' for the given solar zenith angles, which is the replacement chi function used in
+            # Equations 27 and 28.
+            indices = np.searchsorted(np.radians(production.chi), valid_chi)
+            chi_function = np.take(production.q_dash.values, indices)
+
+        # Calculate the ionospheric conductances using the functional form from Moen and Brekke (1993), Equation 6.
+        sigma_h = (self.f_107 ** 0.53) * ((0.81 * chi_function) + (0.54 * np.sqrt(chi_function)))
+        sigma_p = (self.f_107 ** 0.49) * ((0.34 * chi_function) + (0.93 * np.sqrt(chi_function)))
 
         return sigma_h, sigma_p
+
 
     def sigma_grid(self, rf_sigma_h, rf_sigma_p):
         """
@@ -737,7 +755,7 @@ class Model(BaseModel):
     def map_solar_zenith_angle(self, ax, vmin=45, vmax=135, cmap="magma_r", contours=True,
                                **kwargs):
         """Plot a map of the solar zenith angle."""
-        mesh = self._plot_map(ax, np.degrees(self.sza), vmin, vmax, cmap, contours, **kwargs)
+        mesh = self._plot_map(ax, np.degrees(self.chi), vmin, vmax, cmap, contours, **kwargs)
         return mesh
 
     def map_sigma(self, ax, component, vmin=0, vmax=10, cmap="viridis", contours=True, **kwargs):
@@ -813,7 +831,9 @@ class DailyAverage(object):
 
 def save_maximum_plasma_production_values(lompe_data, target_path):
     """
-    Read in data from Lompe at the given path, format it correctly, with proper metadata, and save it.
+    Read in data from Lompe at the specified path and save it as a CSV with the accompanying solar zenith angles.
+    The relevant file should be in the Lompe repository at lompe/data/chapman_euv_productionvalues.txt.
+    (This function created the file in this repository at src/facer/data/maximum_plasma_production.csv.)
 
     Parameters
     ----------
