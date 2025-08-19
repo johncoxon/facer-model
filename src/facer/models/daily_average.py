@@ -37,11 +37,9 @@ class DailyAverage(object):
         if day.hour != 0 or day.minute != 0 or day.second != 0 or day.microsecond != 0:
             raise ValueError("The day must not have any associated time information.")
 
-        self.ut = {}
         j_totals = []
-
-        for hour in np.arange(24):
-            self.ut[hour] = Model(phi_d, phi_d, f_107, day + timedelta(hours=int(hour)), hemisphere, **kwargs)
-            j_totals.append(self.ut[hour].j_total())
+        for hour in np.arange(0, 24):
+            model = Model(phi_d, phi_d, f_107, day + timedelta(hours=int(hour)), hemisphere, **kwargs)
+            j_totals.append(model.j_total())
 
         self.j = np.mean(j_totals)
