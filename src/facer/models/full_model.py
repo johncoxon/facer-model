@@ -15,7 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import numpy as np
-from base_model import BaseModel
+from .base_model import BaseModel
 from pandas import read_csv
 from pathlib import Path
 
