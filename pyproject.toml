@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "facer-model"
-version = "1.0.8"
+version = "1.1.0"
 dependencies = [
     "matplotlib",
     "numpy",
@@ -20,7 +20,7 @@ maintainers = [
     {name = "Matthew J Townson", email = "matthew.townson@northumbria.ac.uk"}
 ]
 description = "The Birkeland current model presented by Coxon et al. (2016), based on Milan (2013)."
-readme = "README.md"    
+readme = "README.md"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENCE.txt"]
 keywords = [
@@ -38,3 +38,9 @@ classifiers = ["Development Status :: 4 - Beta",
 [project.urls]
 doi = "https://doi.org/10.5281/zenodo.15731338"
 repository = "https://github.com/johncoxon/facer-model"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+facer = ["data/*.csv"]

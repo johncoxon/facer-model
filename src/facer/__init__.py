@@ -18,6 +18,8 @@ import numpy as np
 import warnings
 from datetime import timedelta
 from matplotlib.ticker import FuncFormatter, MultipleLocator
+from pandas import read_csv
+from pathlib import Path
 
 
 class BaseModel(object):
@@ -644,18 +646,31 @@ class Model(BaseModel):
         return z
 
     def sigma_q_grid(self):
-        """Grids of quiet-time Hall and Pedersen conductance (Moen and Brekke, 1993)."""
+        """
+        Grids of quiet-time Hall and Pedersen conductance, using the modified version of Moen and Brekke (1993)
+        presented by Laundal et al. (2022). Numerical solutions to their Equation 26 are taken from Lompe.
+        """
         sigma_h = np.zeros_like(self.sza)
         sigma_p = np.zeros_like(self.sza)
 
-        # The contribution from anything on the nightside is 0, so only compute on the dayside.
-        day_mask = self.sza < np.pi / 2.
-        sza_day = self.sza[day_mask]
+        # Read in the maximum plasma production values.
+        parent_directory = Path(__file__).parent.resolve()
+        production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
 
-        sigma_h[day_mask] = (self.f_107 ** 0.53) * ((0.81 * np.cos(sza_day))
-                                                    + (0.54 * np.sqrt(np.cos(sza_day))))
-        sigma_p[day_mask] = (self.f_107 ** 0.49) * ((0.34 * np.cos(sza_day))
-                                                    + (0.93 * np.sqrt(np.cos(sza_day))))
+        # Laundal et al. (2022)'s Equation 26 is only calculated for solar zenith angles between 0–120°.
+        # We can assume any solar zenith angle greater than 120° has a plasma production of zero given
+        # that q' is flat for zenith angles greater than ~113°, so we just set them all to 120°.
+        invalid_mask = self.sza >= np.radians(120)
+        valid_sza = self.sza.copy()
+        valid_sza[invalid_mask] = np.radians(120)
+
+        # Get the values of q' for the given solar zenith angles.
+        indices = np.searchsorted(np.radians(production.chi), valid_sza)
+        q_dash = np.take(production.q_dash.values, indices)
+
+        # Calculate the ionospheric conductances from Equation 27 and 28 of Laundal et al. (2022).
+        sigma_h = (self.f_107 ** 0.53) * ((0.81 * q_dash) + (0.54 * np.sqrt(q_dash)))
+        sigma_p = (self.f_107 ** 0.49) * ((0.34 * q_dash) + (0.93 * np.sqrt(q_dash)))
 
         return sigma_h, sigma_p
 
@@ -793,3 +808,33 @@ class DailyAverage(object):
         self.ut_17 = Model(phi_d, phi_d, f_107, day + timedelta(hours=17), hemisphere, **kwargs)
 
         self.j = np.median((self.ut_5.j_total(), self.ut_17.j_total()))
+
+
+def save_maximum_plasma_production_values(lompe_data, target_path):
+    """
+    Read in data from Lompe at the given path, format it correctly, with proper metadata, and save it.
+
+    Parameters
+    ----------
+    lompe_data : Path
+    target_path : Path
+    """
+    target_file = Path(target_path) / "maximum_plasma_production.csv"
+
+    chi = np.arange(0, 120.1, 0.1)
+    product = np.loadtxt(lompe_data)
+    array_to_write = np.array([chi, product]).T
+
+    np.savetxt(target_file,
+               array_to_write,
+               fmt=["%.1f", "%f"],
+               delimiter=",",
+               header="# Solutions to Equation 26 of Laundal et al. (2022, https://doi.org/10.1029/2022JA030356)\n"
+                      "# which gives maximum plasma production q' as a function of solar zenith angle chi.\n"
+                      "# Solutions from Lompe (Laundal et al., https://doi.org/10.5281/zenodo.5973739), assuming:\n"
+                      "# n(z)        =  1e13 m^-3\n"
+                      "# z0          =   500 km\n"
+                      "# H           =    50 km\n"
+                      "# tau(z, chi) = 1e-20 m^-2\n"
+                      "chi,q_dash",
+               comments="")
