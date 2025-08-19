@@ -14,6 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .models.base_model import BaseModel
+from .models.base import BaseModel
 from .models.daily_average import DailyAverage
-from .models.full_model import Model
+from .models.full import Model

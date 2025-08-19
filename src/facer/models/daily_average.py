@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .full_model import Model
+from .full import Model
 from datetime import timedelta
 from numpy import median
-
 
 class DailyAverage(object):
     def __init__(self, phi_d, f_107, day, hemisphere, **kwargs):
