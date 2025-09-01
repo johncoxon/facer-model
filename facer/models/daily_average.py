@@ -19,7 +19,7 @@ import numpy as np
 from datetime import timedelta
 
 class DailyAverage(object):
-    def __init__(self, phi_d, f_107, day, hemisphere, **kwargs):
+    def __init__(self, phi_d, f_107, day, hemisphere, hours=np.arange(0, 24), **kwargs):
         """
         The FACER model calculated at both UT=5 and UT=17 for the input day and then averaged. Over a timescale of one
         day the dayside and nightside reconnection rates can be assumed to be approximately equal (Cowley and Lockwood,
@@ -38,7 +38,7 @@ class DailyAverage(object):
             raise ValueError("The day must not have any associated time information.")
 
         j_totals = []
-        for hour in np.arange(0, 24):
+        for hour in hours:
             model = Model(phi_d, phi_d, f_107, day + timedelta(hours=int(hour)), hemisphere, **kwargs)
             j_totals.append(model.j_total())
 
