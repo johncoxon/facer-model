@@ -54,12 +54,12 @@ class Model(BaseModel):
                 Laundal et al. (2022), which modifies the assumption Moen and Brekke (1993) employ of a flat Earth.
             If True, quiet-time conductance modelling uses Moen and Brekke (1993) directly.
         """
-        BaseModel.__init__(self, phi_d, phi_n, **kwargs)
+        if ~np.isfinite(f_107):
+            raise ValueError("Non-finite F10.7 input detected.")
+        elif f_107 <= 0:
+            raise ValueError("Zero or negative F10.7 input detected.")
 
-        for arg in (f_107, sigma_h, sigma_p):
-            if arg:
-                if np.isnan(arg):
-                    raise ValueError("NaN detected in input.")
+        BaseModel.__init__(self, phi_d, phi_n, **kwargs)
 
         self.f_107 = f_107
         self.time = time

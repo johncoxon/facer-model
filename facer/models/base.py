@@ -48,11 +48,19 @@ class BaseModel(object):
         """
         for arg in (phi_d, phi_n, f_pc, r1_colat, delta_colat, theta_d, theta_n, sigma_pc, sigma_rf, order_n):
             if arg:
-                if np.isnan(arg):
-                    raise ValueError("NaN detected in input.")
+                if ~np.isfinite(arg):
+                    raise ValueError("Non-finite inputs detected.")
+                elif arg < 0:
+                    raise ValueError("Negative inputs detected.")
 
+        for arg in (f_pc, r1_colat, delta_colat, theta_d, theta_n, order_n):
+            if arg:
+                if arg == 0:
+                    raise ValueError("Zero inputs detected.")
+
+        # Assign instance variables from arguments, convert to SI units or radians.
         self.phi_d = phi_d * 1e3
-        self.phi_n = phi_n * 1e3                        # Convert to SI units from inputs
+        self.phi_n = phi_n * 1e3
         self.theta_d = np.radians(theta_d)
         self.theta_n = np.radians(theta_n)
         self.sigma_pc = sigma_pc
@@ -65,20 +73,21 @@ class BaseModel(object):
         self._r_e = 6.371e6                     # Earth radius of 6371 km.
         self._b_eq = 31000e-9                   # Equatorial field strength of 31,000 nT.
 
-        if (f_pc is not None) and (r1_colat is not None):
-            self.f_pc = f_pc * 1e9
+        if r1_colat and f_pc:
+            self.f_pc = f_pc * 1e9                  # Convert to SI units from input.
             self.labda_r1 = np.radians(r1_colat)
             warnings.warn("Setting both polar cap flux and R1 colatitude will set both manually. "
                           "This is supported to allow comparisons with the original IDL, but is "
                           "not recommended.")
-        elif f_pc is not None:
-            self.f_pc = f_pc * 1e9
+        elif f_pc:
+            self.f_pc = f_pc * 1e9  # Convert to SI units from input.
             self.labda_r1 = self.lambda_r1()
-        elif r1_colat is not None:
+        elif r1_colat:
             self.labda_r1 = np.radians(r1_colat)
             self.f_pc = self.f_pc_analytic()
         else:
             raise ValueError("You must pass either polar cap flux or R1 colatitude to the model.")
+
         self.labda_r2 = self.labda_r1 + np.radians(delta_colat)
 
         # Configure the default grid for the model. Milan (2013) uses the symbol lambda to refer to

@@ -21,7 +21,7 @@ def save_maximum_plasma_production_values(lompe_data, target_path):
     """
     Read in data from Lompe at the specified path and save it as a CSV with the accompanying solar zenith angles.
     The relevant file should be in the Lompe repository at lompe/data/chapman_euv_productionvalues.txt.
-    (This function created the file in this repository at src/facer/data/maximum_plasma_production.csv.)
+    (This function created the file in this repository at facer/data/maximum_plasma_production.csv.)
 
     Parameters
     ----------
