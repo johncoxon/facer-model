@@ -26,8 +26,8 @@ class Model(BaseModel):
         """
         A Python implementation of the Birkeland current model presented by Coxon et al. (2016).
 
-        An expansion of the Milan (2013) model expanded with more realistic conductances based on the
-        Moen and Brekke (1993) model of quiet-time conductance.
+        An expansion of the Milan (2013) model expanded with more realistic conductances based on either the
+        Juusola et al. (2025) or the Moen and Brekke (1993) model of quiet-time conductance.
 
         kwargs are passed onto the underlying BaseModel class.
 
@@ -50,9 +50,9 @@ class Model(BaseModel):
                   (this is the original IDL behaviour).
             replace : Replace the quiet-time with the precipitation-driven conductances.
         flat_earth : bool, optional, default False
-            If False, quiet-time conductance modelling uses the modified version of Moen and Brekke (1993) presented by
-                Laundal et al. (2022), which modifies the assumption Moen and Brekke (1993) employ of a flat Earth.
-            If True, quiet-time conductance modelling uses Moen and Brekke (1993) directly.
+            If False, quiet-time conductance modelling uses Juusola et al. (2025)'s model of background and EUV
+            conductance, which does not assume a flat Earth.
+            If True, quiet-time conductance modelling uses Moen and Brekke (1993).
         """
         if ~np.isfinite(f_107):
             raise ValueError("Non-finite F10.7 input detected.")
@@ -113,28 +113,38 @@ class Model(BaseModel):
             valid_chi = self.chi.copy()
             valid_chi[invalid_mask] = np.radians(90)
 
-            chi_function = np.cos(valid_chi)  # This is the chi function for Moen and Brekke (1993)'s Equation 6.
+            # Calculate the ionospheric conductances using the functional form from Moen and Brekke (1993), Equation 6.
+            sigma_h = (self.f_107 ** 0.53) * ((0.81 * np.cos(valid_chi)) + (0.54 * np.sqrt(np.cos(valid_chi))))
+            sigma_p = (self.f_107 ** 0.49) * ((0.34 * np.cos(valid_chi)) + (0.93 * np.sqrt(np.cos(valid_chi))))
 
-        # Or follow Laundal et al. (2022). Equation numbers are from that paper.
+        # Or follow Juusola et al. (2025).
         else:
             # Read in the maximum plasma production values.
             parent_directory = Path(__file__).parent.parent.resolve()
             production = read_csv(parent_directory / "data" / "maximum_plasma_production.csv", comment="#")
 
-            # Equation 26 is only calculated for solar zenith angles between 0–120°. We can assume any solar zenith
-            # angle greater than 120° has a production of zero given that q' is flat for angles greater than ~113°.
+            # q' in Lompe (Equation 26 in Laundal et al., 2022) is only calculated for solar zenith angles between
+            # 0–120°. We can assume any solar zenith angle greater than 120° has a production of zero given that q' is
+            # flat for angles greater than ~113°.
             invalid_mask = self.chi > np.radians(120)
             valid_chi = self.chi.copy()
             valid_chi[invalid_mask] = np.radians(120)
 
-            # Get the values of q' for the given solar zenith angles, which is the replacement chi function used in
-            # Equations 27 and 28.
+            # Get the values of q' for the given solar zenith angles.
             indices = np.searchsorted(np.radians(production.chi), valid_chi)
             chi_function = np.take(production.q_dash.values, indices)
 
-        # Calculate the ionospheric conductances using the functional form from Moen and Brekke (1993), Equation 6.
-        sigma_h = (self.f_107 ** 0.53) * ((0.81 * chi_function) + (0.54 * np.sqrt(chi_function)))
-        sigma_p = (self.f_107 ** 0.49) * ((0.34 * chi_function) + (0.93 * np.sqrt(chi_function)))
+            # Calculate Equation 33 from Juusola et al., 2025 using the values from their Table 1.
+            sigma_p_euv = 0.351 * self.f_107 ** 0.697 * chi_function ** 0.707
+            sigma_h_euv = 0.720 * self.f_107 ** 0.617 * chi_function ** 0.846
+
+            # Calculate Equation 28 from Juusola et al., 2025 neglecting the precipitation contribution and using the
+            # tables from their Table 1.
+            sigma_p_bg = 0.625
+            sigma_h_bg = 0.894
+
+            sigma_p = np.sqrt(sigma_p_bg ** 2 + sigma_p_euv ** 2)
+            sigma_h = np.sqrt(sigma_h_bg ** 2 + sigma_h_euv ** 2)
 
         return sigma_h, sigma_p
 
